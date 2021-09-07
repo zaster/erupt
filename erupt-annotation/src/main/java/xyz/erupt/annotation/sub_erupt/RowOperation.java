@@ -73,5 +73,5 @@ public @interface RowOperation {
     }
 
     @Comment("ERUPT的使用模式")
-    EruptMode eruptMode();
+    EruptMode eruptMode() default EruptMode.FORM;
 }
