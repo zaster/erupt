@@ -1,17 +1,16 @@
 package xyz.erupt.annotation.sub_erupt;
 
+import java.beans.Transient;
+
 import xyz.erupt.annotation.config.AutoFill;
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.expr.ExprBool;
 import xyz.erupt.annotation.fun.OperationHandler;
 
-import java.beans.Transient;
-
 /**
  * 使用一列或者多列的数据执行特定代码
  *
- * @author YuePeng
- * date 2018-10-09.
+ * @author YuePeng date 2018-10-09.
  */
 public @interface RowOperation {
 
@@ -56,17 +55,23 @@ public @interface RowOperation {
 
     enum Mode {
         @Comment("依赖单行数据")
-        SINGLE,
-        @Comment("依赖多行数据")
-        MULTI,
-        @Comment("无需依赖数据")
+        SINGLE, @Comment("依赖多行数据")
+        MULTI, @Comment("无需依赖数据")
         BUTTON
+    }
+
+    enum EruptMode {
+        @Comment("erupt为表单")
+        FORM, @Comment("erupt为表格")
+        TABLE
     }
 
     enum Type {
         @Comment("通过erupt表单渲染，operationHandler进行逻辑处理")
-        ERUPT,
-        @Comment("通过自定义模板渲染")
+        ERUPT, @Comment("通过自定义模板渲染")
         TPL
     }
+
+    @Comment("ERUPT的使用模式")
+    EruptMode eruptMode();
 }
