@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>xyz.erupt</groupId>
@@ -36,15 +35,15 @@
         <module>erupt-tpl-ui/element-ui</module>
         <module>erupt-tpl-ui/amis</module>
 
-        <module>erupt-data/erupt-jpa</module><!-- Hibernate JPA 数据实现 -->
-        <module>erupt-data/erupt-mongodb</module><!-- MongoDB   数据实现 -->
+        <module>erupt-data/erupt-jpa</module> <!-- Hibernate JPA 数据实现 -->
+        <module>erupt-data/erupt-mongodb</module> <!-- MongoDB   数据实现 -->
 
-        <module>erupt-upms</module><!--用户权限管理-->
-        <module>erupt-security</module><!--API 接口安全-->
-        <module>erupt-web</module><!--前端代码-->
-        <module>erupt-job</module><!--任务调度-->
-        <module>erupt-generator</module><!--代码生成-->
-        <module>erupt-monitor</module><!--服务监控-->
+        <module>erupt-upms</module> <!--用户权限管理-->
+        <module>erupt-security</module> <!--API 接口安全-->
+        <module>erupt-web</module> <!--前端代码-->
+        <module>erupt-job</module> <!--任务调度-->
+        <module>erupt-generator</module> <!--代码生成-->
+        <module>erupt-monitor</module> <!--服务监控-->
 
         <module>erupt-magic-api</module> <!-- magic-api 接口配置 -->
     </modules>
@@ -141,7 +140,7 @@
             <!-- java8版本导致javadoc打包编译失败时候，添加-->
             <properties>
                 <javadoc.opts>-Xdoclint:none</javadoc.opts>
-                <javadocExecutable>${java.home}/../bin/javadoc</javadocExecutable>
+                <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
             </properties>
         </profile>
         <profile>
@@ -189,7 +188,7 @@
                         </executions>
                     </plugin>
                     <!-- GPG -->
-                    <plugin>
+                    <!-- <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>1.6</version>
@@ -202,21 +201,16 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>
+                    </plugin> -->
                 </plugins>
             </build>
 
             <distributionManagement>
-                <snapshotRepository>
-                    <id>erupt</id>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-                </snapshotRepository>
                 <repository>
-                    <id>erupt</id>
-                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                    <id>localRepository</id>
+                    <url>file:/Users/ecgwela/.m2/repository</url>
                 </repository>
             </distributionManagement>
         </profile>
     </profiles>
 </project>
-
