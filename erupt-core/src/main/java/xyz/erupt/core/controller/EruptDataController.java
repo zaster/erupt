@@ -142,7 +142,7 @@ public class EruptDataController {
         if (rowOperation.operationHandler().isInterface()) {
             return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
         }
-        if (rowOperation.eruptClass() != void.class) {
+        if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
             EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
             EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt, body.getAsJsonObject("param"));
             if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
