@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +27,6 @@ import xyz.erupt.annotation.fun.OperationHandler;
 import xyz.erupt.annotation.fun.PowerObject;
 import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.annotation.sub_erupt.RowOperation;
-import xyz.erupt.annotation.sub_erupt.RowOperation.EruptMode;
 import xyz.erupt.annotation.sub_erupt.Tree;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.sub_edit.CheckboxType;
@@ -91,16 +89,6 @@ public class EruptDataController {
                 EruptQuery.builder().build());
     }
 
-    // 树懒加载
-    @GetMapping("/tree_load/{erupt}")
-    @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-    public Collection<TreeModel> getEruptTreeByChildren(@PathVariable("erupt") String eruptName,
-            @RequestParam("pid") String pid) {
-        EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-        Erupts.powerLegal(eruptModel, PowerObject::isQuery);
-        return null;
-    }
-
     // 获取初始化数据
     @GetMapping("/init-value/{erupt}")
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -133,54 +121,35 @@ public class EruptDataController {
     public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName, @PathVariable("code") String code,
             @RequestBody JsonObject body) {
         EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-        JsonObject paramobj = (!body.get("param").isJsonNull()) ? body.getAsJsonObject("param") : null;
         RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                 .filter(it -> code.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
-        if (!ExprInvoke.getExpr(rowOperation.show())) {
-            throw new EruptNoLegalPowerException();
-        }
-        if (rowOperation.operationHandler().isInterface()) {
-            return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
-        }
-        if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
+        Erupts.powerLegal(ExprInvoke.getExpr(rowOperation.show()));
+        if (rowOperation.eruptClass() != void.class) {
             EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
             EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt, body.getAsJsonObject("param"));
             if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
                 return eruptApiModel;
         }
-
+        if (rowOperation.operationHandler().isInterface()) {
+            return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
+        }
         OperationHandler<Object, Object> operationHandler = EruptSpringUtil.getBean(rowOperation.operationHandler());
         Object param = null;
-        // 表单形式参数
-        if (paramobj != null && rowOperation.eruptMode() == EruptMode.FORM) {
-            param = gson.fromJson(paramobj, rowOperation.eruptClass());
+        if (!body.get("param").isJsonNull()) {
+            param = gson.fromJson(body.getAsJsonObject("param"), rowOperation.eruptClass());
         }
-        // 表格形式参数
-        List<Object> list = new ArrayList<>();
+        if (rowOperation.mode() == RowOperation.Mode.BUTTON) {
+            return EruptApiModel.successApi("执行成功", operationHandler.exec(null, param, rowOperation.operationParam()));
+        }
         if (body.get("ids").isJsonArray() && body.getAsJsonArray("ids").size() > 0) {
-
-            for (JsonElement id : body.getAsJsonArray("ids")) {
-                Object obj = null;
-                if (rowOperation.eruptMode() == EruptMode.FORM) {
-                    obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz()).findDataById(eruptModel,
-                            EruptUtil.toEruptId(eruptModel, id.getAsString()));
-                } else {
-                    EruptModel tableEruptModel = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
-                    obj = DataProcessorManager.getEruptDataProcessor(tableEruptModel.getClazz())
-                            .findDataById(tableEruptModel, EruptUtil.toEruptId(tableEruptModel, id.getAsString()));
-                }
-
-                list.add(obj);
-            }
-        }
-        if (list.isEmpty() && (rowOperation.mode() != RowOperation.Mode.BUTTON
-                || rowOperation.eruptMode() == RowOperation.EruptMode.TABLE)) {
+            List<Object> list = new ArrayList<>();
+            body.getAsJsonArray("ids")
+                    .forEach(id -> list.add(DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
+                            .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id.getAsString()))));
+            return EruptApiModel.successApi("执行成功", operationHandler.exec(list, param, rowOperation.operationParam()));
+        } else {
             return EruptApiModel.errorApi("执行该操作时请至少选中一条数据");
         }
-
-        operationHandler.exec(list, param, rowOperation.operationParam());
-        return EruptApiModel.successApi("执行成功", null);
-
     }
 
     @GetMapping("/tab/tree/{erupt}/{tabFieldName}")
@@ -267,9 +236,8 @@ public class EruptDataController {
         if (null == eruptModel.getEruptFieldMap().get(field)) {
             String treeErupt = eruptModel.getClazz().getDeclaredField(field).getType().getSimpleName();
             return this.getEruptTreeData(treeErupt);
-        } else {
-            return this.getReferenceTree(eruptModel.getEruptName(), field, null);
         }
+        return this.getReferenceTree(eruptModel.getEruptName(), field, null);
     }
 
     @GetMapping("/{erupt}/reference-tree/{fieldName}")
