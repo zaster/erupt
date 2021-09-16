@@ -4,8 +4,7 @@ import xyz.erupt.annotation.config.AutoFill;
 import xyz.erupt.annotation.config.Comment;
 
 /**
- * @author YuePeng
- * date 2020-02-17.
+ * @author YuePeng date 2020-02-17.
  */
 public @interface Drill {
 
@@ -20,4 +19,6 @@ public @interface Drill {
 
     @Comment("下钻目标配置")
     Link link();
+
+    Power power() default @Power;
 }
