@@ -1,6 +1,8 @@
 package xyz.erupt.jpa.dao;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.jpa.service.EntityManagerService;
@@ -25,13 +27,17 @@ public class EruptDao {
     @Resource
     private EntityManagerService entityManagerService;
 
+    @Resource
+    private JdbcTemplate jdbcTemplate;
+
+    @Resource
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
     private static final String SELECT = "select ";
 
     private static final String FROM = " from ";
 
     private static final String NEW_MAP = "new map(";
-
-    private static final String AND = " and ";
 
     private static final String AS = " as ";
 
@@ -41,9 +47,19 @@ public class EruptDao {
 
     //修改
     public <T> T merge(T t) {
-        T type = entityManager.merge(t);
+        return entityManager.merge(t);
+    }
+
+    public <T> T mergeAndFlush(T t) {
+        try {
+            return this.merge(t);
+        } finally {
+            this.flush();
+        }
+    }
+
+    public void flush() {
         entityManager.flush();
-        return type;
     }
 
     //删除
@@ -58,6 +74,14 @@ public class EruptDao {
 
     public EntityManager getEntityManager() {
         return entityManager;
+    }
+
+    public JdbcTemplate getJdbcTemplate() {
+        return jdbcTemplate;
+    }
+
+    public NamedParameterJdbcTemplate getNamedParameterJdbcTemplate() {
+        return namedParameterJdbcTemplate;
     }
 
     @Comment("根据数据源名称获取 EntityManager  注意：必须手动执行 entityManager.close() 方法")
@@ -79,11 +103,11 @@ public class EruptDao {
     }
 
     //以下方法调用时需考虑sql注入问题，切勿随意传递expr参数值!!!
-    public List<Map<String, Object>> queryMapList(Class eruptClass, String expr, Map<String, Object> param, String... cols) {
+    public List<Map<String, Object>> queryMapList(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) {
         return simpleQuery(eruptClass, true, expr, param, cols).getResultList();
     }
 
-    public List<Object[]> queryObjectList(Class eruptClass, String expr, Map<String, Object> param, String... cols) {
+    public List<Object[]> queryObjectList(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) {
         return simpleQuery(eruptClass, false, expr, param, cols).getResultList();
     }
 
@@ -99,7 +123,7 @@ public class EruptDao {
         return this.queryEntityList(eruptClass, null);
     }
 
-    public Map<String, Object> queryMap(Class eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
+    public Map<String, Object> queryMap(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
         try {
             return (Map<String, Object>) simpleQuery(eruptClass, true, expr, param, cols).getSingleResult();
         } catch (NoResultException e) {
@@ -107,7 +131,7 @@ public class EruptDao {
         }
     }
 
-    public Object[] queryObject(Class eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
+    public Object[] queryObject(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
         try {
             return (Object[]) simpleQuery(eruptClass, false, expr, param, cols).getSingleResult();
         } catch (NoResultException e) {
@@ -131,7 +155,7 @@ public class EruptDao {
         return this.queryEntity(eruptClass, null);
     }
 
-    private Query simpleQuery(Class eruptClass, boolean isMap, String expr, Map<String, Object> paramMap, String... cols) {
+    private Query simpleQuery(Class<?> eruptClass, boolean isMap, String expr, Map<String, Object> paramMap, String... cols) {
         StringBuilder sb = new StringBuilder();
         if (cols.length > 0) {
             sb.append(SELECT);
@@ -148,10 +172,8 @@ public class EruptDao {
             }
         }
         expr = StringUtils.isBlank(expr) ? "" : WHERE + expr;
-        Query query = entityManager.createQuery(sb.toString() + FROM + eruptClass.getSimpleName() + expr);
-        Optional.ofNullable(paramMap).ifPresent(map -> {
-            map.entrySet().forEach(entry -> query.setParameter(entry.getKey(), entry.getValue()));
-        });
+        Query query = entityManager.createQuery(sb + FROM + eruptClass.getSimpleName() + expr);
+        Optional.ofNullable(paramMap).ifPresent(map -> map.forEach(query::setParameter));
         return query;
     }
 }
