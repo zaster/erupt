@@ -15,6 +15,7 @@ import com.google.gson.JsonObject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -187,15 +188,18 @@ public class EruptDataController {
                                 return EruptApiModel.errorApi("上传失败，请选择文件");
                         }
                         String fileName = file.getOriginalFilename();
-                        if (!(fileName.endsWith(EruptExcelService.XLS_FORMAT)
-                                        || fileName.endsWith(EruptExcelService.XLSX_FORMAT))) {
-
-                                throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
-                        }
                         Map<String, Object> map = new HashMap<String, Object>();
                         map.put("param", param);
                         try {
-                                map.put("file", new HSSFWorkbook(file.getInputStream()));
+                                if (fileName.endsWith(EruptExcelService.XLS_FORMAT)) {
+                                        map.put("file", new HSSFWorkbook(file.getInputStream()));
+                                } else if (fileName.endsWith(EruptExcelService.XLSX_FORMAT)) {
+                                        map.put("file", new XSSFWorkbook(file.getInputStream()));
+
+                                } else {
+                                        throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
+                                }
+
                         } catch (IOException e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
