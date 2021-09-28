@@ -1,9 +1,11 @@
 package xyz.erupt.core.controller;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +14,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -39,6 +43,7 @@ import xyz.erupt.core.annotation.EruptRouter;
 import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.constant.EruptRestPath;
 import xyz.erupt.core.exception.EruptNoLegalPowerException;
+import xyz.erupt.core.exception.EruptWebApiRuntimeException;
 import xyz.erupt.core.invoke.DataProcessorManager;
 import xyz.erupt.core.invoke.DataProxyInvoke;
 import xyz.erupt.core.invoke.ExprInvoke;
@@ -46,6 +51,7 @@ import xyz.erupt.core.naming.EruptRowOperationConfig;
 import xyz.erupt.core.query.Column;
 import xyz.erupt.core.query.EruptQuery;
 import xyz.erupt.core.service.EruptCoreService;
+import xyz.erupt.core.service.EruptExcelService;
 import xyz.erupt.core.service.EruptService;
 import xyz.erupt.core.service.PreEruptDataService;
 import xyz.erupt.core.util.AnnotationUtil;
@@ -121,18 +127,23 @@ public class EruptDataController {
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, @RequestBody JsonObject body) {
+                        @PathVariable("code") String code, @RequestBody JsonObject body,
+                        @RequestParam("file") MultipartFile file) {
+
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
                 JsonObject paramobj = (!body.get("param").isJsonNull()) ? body.getAsJsonObject("param") : null;
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
+                OperationHandler<Object, Object> operationHandler = EruptSpringUtil
+                                .getBean(rowOperation.operationHandler());
                 if (!ExprInvoke.getExpr(rowOperation.show())) {
                         throw new EruptNoLegalPowerException();
                 }
                 if (rowOperation.operationHandler().isInterface()) {
                         return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
                 }
+
                 if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
                         EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
                         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,
@@ -141,8 +152,6 @@ public class EruptDataController {
                                 return eruptApiModel;
                 }
 
-                OperationHandler<Object, Object> operationHandler = EruptSpringUtil
-                                .getBean(rowOperation.operationHandler());
                 Object param = null;
                 // 表单形式参数
                 if (paramobj != null && rowOperation.eruptMode() == EruptMode.FORM) {
@@ -173,7 +182,28 @@ public class EruptDataController {
                                 || rowOperation.eruptMode() == RowOperation.EruptMode.TABLE)) {
                         return EruptApiModel.errorApi("执行该操作时请至少选中一条数据");
                 }
+                if (rowOperation.type() == RowOperation.Type.IMPORT) {
+                        if (file.isEmpty()) {
+                                return EruptApiModel.errorApi("上传失败，请选择文件");
+                        }
+                        String fileName = file.getOriginalFilename();
+                        if (!(fileName.endsWith(EruptExcelService.XLS_FORMAT)
+                                        || fileName.endsWith(EruptExcelService.XLSX_FORMAT))) {
 
+                                throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
+                        }
+                        Map<String, Object> map = new HashMap<String, Object>();
+                        map.put("param", param);
+                        try {
+                                map.put("file", new HSSFWorkbook(file.getInputStream()));
+                        } catch (IOException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                        }
+                        operationHandler.exec(list, map, rowOperation.operationParam());
+
+                        return EruptApiModel.successApi();
+                }
                 operationHandler.exec(list, param, rowOperation.operationParam());
                 return EruptApiModel.successApi("执行成功", null);
 

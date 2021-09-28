@@ -68,7 +68,7 @@ public @interface RowOperation {
 
     enum Type {
         @Comment("通过erupt表单渲染，operationHandler进行逻辑处理")
-        ERUPT, @Comment("通过自定义模板渲染")
+        ERUPT, IMPORT, @Comment("通过自定义模板渲染")
         TPL
     }
 
