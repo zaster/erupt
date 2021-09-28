@@ -128,8 +128,7 @@ public class EruptDataController {
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, @RequestBody JsonObject body,
-                        @RequestParam("file") MultipartFile file) {
+                        @PathVariable("code") String code, @RequestBody JsonObject body) {
 
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
                 JsonObject paramobj = (!body.get("param").isJsonNull()) ? body.getAsJsonObject("param") : null;
@@ -183,33 +182,55 @@ public class EruptDataController {
                                 || rowOperation.eruptMode() == RowOperation.EruptMode.TABLE)) {
                         return EruptApiModel.errorApi("执行该操作时请至少选中一条数据");
                 }
-                if (rowOperation.type() == RowOperation.Type.IMPORT) {
-                        if (file.isEmpty()) {
-                                return EruptApiModel.errorApi("上传失败，请选择文件");
-                        }
-                        String fileName = file.getOriginalFilename();
-                        Map<String, Object> map = new HashMap<String, Object>();
-                        map.put("param", param);
-                        try {
-                                if (fileName.endsWith(EruptExcelService.XLS_FORMAT)) {
-                                        map.put("file", new HSSFWorkbook(file.getInputStream()));
-                                } else if (fileName.endsWith(EruptExcelService.XLSX_FORMAT)) {
-                                        map.put("file", new XSSFWorkbook(file.getInputStream()));
 
-                                } else {
-                                        throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
-                                }
-
-                        } catch (IOException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                        }
-                        operationHandler.exec(list, map, rowOperation.operationParam());
-
-                        return EruptApiModel.successApi();
-                }
                 operationHandler.exec(list, param, rowOperation.operationParam());
                 return EruptApiModel.successApi("执行成功", null);
+
+        }
+
+        @PostMapping("/{erupt}/importx/{code}")
+        @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
+        @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
+        public EruptApiModel execEruptImportor(@PathVariable("erupt") String eruptName,
+                        @PathVariable("code") String code, @RequestParam("parent") String parent,
+                        @RequestParam("parentId") String parentId, @RequestParam("file") MultipartFile file) {
+
+                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
+                                .filter(it -> code.equals(it.code())).findFirst()
+                                .orElseThrow(EruptNoLegalPowerException::new);
+                OperationHandler<Object, Object> operationHandler = EruptSpringUtil
+                                .getBean(rowOperation.operationHandler());
+                if (!ExprInvoke.getExpr(rowOperation.show())) {
+                        throw new EruptNoLegalPowerException();
+                }
+                if (rowOperation.operationHandler().isInterface()) {
+                        return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
+                }
+                if (file.isEmpty()) {
+                        return EruptApiModel.errorApi("上传失败，请选择文件");
+                }
+                String fileName = file.getOriginalFilename();
+                Map<String, Object> map = new HashMap<String, Object>();
+                map.put("parent", parent);
+                map.put("parentId", parentId);
+                try {
+                        if (fileName.endsWith(EruptExcelService.XLS_FORMAT)) {
+                                map.put("file", new HSSFWorkbook(file.getInputStream()));
+                        } else if (fileName.endsWith(EruptExcelService.XLSX_FORMAT)) {
+                                map.put("file", new XSSFWorkbook(file.getInputStream()));
+
+                        } else {
+                                throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
+                        }
+
+                } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                }
+                operationHandler.exec(null, map, rowOperation.operationParam());
+
+                return EruptApiModel.successApi();
 
         }
 
