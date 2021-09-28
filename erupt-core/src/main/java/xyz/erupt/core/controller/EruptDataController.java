@@ -188,7 +188,7 @@ public class EruptDataController {
 
         }
 
-        @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/{code}/importx")
+        @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/importx/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptImportor(@PathVariable("erupt") String eruptName,
