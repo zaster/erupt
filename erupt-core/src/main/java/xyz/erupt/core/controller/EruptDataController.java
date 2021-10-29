@@ -1,3 +1,4 @@
+
 package xyz.erupt.core.controller;
 
 import java.io.IOException;
@@ -156,6 +157,8 @@ public class EruptDataController {
                 // 表单形式参数
                 if (paramobj != null && rowOperation.eruptMode() == EruptMode.FORM) {
                         param = gson.fromJson(paramobj, rowOperation.eruptClass());
+                } else {
+                        param = paramobj;
                 }
                 // 表格形式参数
                 List<Object> list = new ArrayList<>();
