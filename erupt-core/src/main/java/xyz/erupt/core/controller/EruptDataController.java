@@ -55,6 +55,7 @@ import xyz.erupt.core.query.EruptQuery;
 import xyz.erupt.core.service.EruptCoreService;
 import xyz.erupt.core.service.EruptExcelService;
 import xyz.erupt.core.service.EruptService;
+import xyz.erupt.core.service.I18NTranslateService;
 import xyz.erupt.core.service.PreEruptDataService;
 import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.EruptSpringUtil;
@@ -82,6 +83,8 @@ public class EruptDataController {
         private final PreEruptDataService preEruptDataService;
 
         private final Gson gson = GsonFactory.getGson();
+
+        private final I18NTranslateService i18NTranslateService;
 
         @PostMapping({ "/table/{erupt}" })
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -183,11 +186,11 @@ public class EruptDataController {
                 }
                 if (list.isEmpty() && (rowOperation.mode() != RowOperation.Mode.BUTTON
                                 || rowOperation.eruptMode() == RowOperation.EruptMode.TABLE)) {
-                        return EruptApiModel.errorApi("执行该操作时请至少选中一条数据");
+                        return EruptApiModel.errorApi(i18NTranslateService.translate("执行该操作时请至少选中一条数据"));
                 }
 
                 operationHandler.exec(list, param, rowOperation.operationParam());
-                return EruptApiModel.successApi("执行成功", null);
+                return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
 
         }
 
