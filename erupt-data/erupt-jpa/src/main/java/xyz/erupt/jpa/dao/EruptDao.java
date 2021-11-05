@@ -1,22 +1,27 @@
 package xyz.erupt.jpa.dao;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Component;
-import xyz.erupt.annotation.config.Comment;
-import xyz.erupt.jpa.service.EntityManagerService;
-
-import javax.annotation.Resource;
-import javax.persistence.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import xyz.erupt.annotation.config.Comment;
+import xyz.erupt.jpa.service.EntityManagerService;
+
 /**
- * @author YuePeng
- * date 2019-12-23
+ * @author YuePeng date 2019-12-23
  */
 @Component
 public class EruptDao {
@@ -45,7 +50,7 @@ public class EruptDao {
 
     private static final String WHERE = " where ";
 
-    //修改
+    // 修改
     public <T> T merge(T t) {
         return entityManager.merge(t);
     }
@@ -62,12 +67,12 @@ public class EruptDao {
         entityManager.flush();
     }
 
-    //删除
+    // 删除
     public void delete(Object obj) {
         entityManager.remove(obj);
     }
 
-    //新增
+    // 新增
     public void persist(Object obj) {
         entityManager.persist(obj);
     }
@@ -84,16 +89,19 @@ public class EruptDao {
         return namedParameterJdbcTemplate;
     }
 
-    @Comment("根据数据源名称获取 EntityManager 注意：必须手动执行 entityManager.close() 方法")
+    @Comment("根据数据源名称获取 EntityManager  注意：必须手动执行 entityManager.close() 方法")
     public EntityManager getEntityManager(String name) {
         return entityManagerService.findEntityManager(name);
     }
 
-    //不存在则新增
-    public <T> T persistIfNotExist(Class<T> eruptClass, Object obj, String field, String val) throws NonUniqueResultException {
-        T t = (T) queryEntity(obj.getClass(), field + EQU + " :val", new HashMap<String, Object>(1) {{
-            this.put("val", val);
-        }});
+    // 不存在则新增
+    public <T> T persistIfNotExist(Class<T> eruptClass, Object obj, String field, String val)
+            throws NonUniqueResultException {
+        T t = (T) queryEntity(obj.getClass(), field + EQU + " :val", new HashMap<String, Object>(1) {
+            {
+                this.put("val", val);
+            }
+        });
         if (null == t) {
             entityManager.persist(obj);
             entityManager.flush();
@@ -102,8 +110,9 @@ public class EruptDao {
         return t;
     }
 
-    //以下方法调用时需考虑sql注入问题，切勿随意传递expr参数值!!!
-    public List<Map<String, Object>> queryMapList(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) {
+    // 以下方法调用时需考虑sql注入问题，切勿随意传递expr参数值!!!
+    public List<Map<String, Object>> queryMapList(Class<?> eruptClass, String expr, Map<String, Object> param,
+            String... cols) {
         return simpleQuery(eruptClass, true, expr, param, cols).getResultList();
     }
 
@@ -123,7 +132,8 @@ public class EruptDao {
         return this.queryEntityList(eruptClass, null);
     }
 
-    public Map<String, Object> queryMap(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
+    public Map<String, Object> queryMap(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols)
+            throws NonUniqueResultException {
         try {
             return (Map<String, Object>) simpleQuery(eruptClass, true, expr, param, cols).getSingleResult();
         } catch (NoResultException e) {
@@ -131,7 +141,8 @@ public class EruptDao {
         }
     }
 
-    public Object[] queryObject(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols) throws NonUniqueResultException {
+    public Object[] queryObject(Class<?> eruptClass, String expr, Map<String, Object> param, String... cols)
+            throws NonUniqueResultException {
         try {
             return (Object[]) simpleQuery(eruptClass, false, expr, param, cols).getSingleResult();
         } catch (NoResultException e) {
@@ -139,7 +150,8 @@ public class EruptDao {
         }
     }
 
-    public <T> T queryEntity(Class<T> eruptClass, String expr, Map<String, Object> param) throws NonUniqueResultException {
+    public <T> T queryEntity(Class<T> eruptClass, String expr, Map<String, Object> param)
+            throws NonUniqueResultException {
         try {
             return (T) simpleQuery(eruptClass, false, expr, param).getSingleResult();
         } catch (NoResultException e) {
@@ -155,7 +167,8 @@ public class EruptDao {
         return this.queryEntity(eruptClass, null);
     }
 
-    private Query simpleQuery(Class<?> eruptClass, boolean isMap, String expr, Map<String, Object> paramMap, String... cols) {
+    private Query simpleQuery(Class<?> eruptClass, boolean isMap, String expr, Map<String, Object> paramMap,
+            String... cols) {
         StringBuilder sb = new StringBuilder();
         if (cols.length > 0) {
             sb.append(SELECT);
