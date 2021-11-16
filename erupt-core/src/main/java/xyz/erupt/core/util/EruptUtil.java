@@ -48,7 +48,8 @@ import xyz.erupt.core.view.EruptFieldModel;
 import xyz.erupt.core.view.EruptModel;
 
 /**
- * @author YuePeng date 11/1/18.
+ * @author YuePeng 
+ * date 11/1/18.
  */
 public class EruptUtil {
 
@@ -84,16 +85,13 @@ public class EruptUtil {
                     referMap.put(id, ReflectUtil.findFieldChain(id, value));
                     referMap.put(label, ReflectUtil.findFieldChain(label, value));
                     for (View view : eruptField.views()) {
-                        // 修复表格列无法显示子类属性（例如xxx.yyy.zzz这样的列配置）的缺陷，要配合前端的bug修复。
-                        String viewKey = view.column().replace(".", "_");
-                        referMap.put(viewKey, ReflectUtil.findFieldChain(view.column(), value));
-                        map.put(field.getName() + "_" + viewKey, value);
+                        //修复表格列无法显示子类属性（例如xxx.yyy.zzz这样的列配置）的缺陷，要配合前端的bug修复。
+                        referMap.put(view.column(), ReflectUtil.findFieldChain(view.column(), value));
                     }
                     map.put(field.getName(), referMap);
                     break;
                 case COMBINE:
-                    map.put(field.getName(),
-                            generateEruptDataMap(EruptCoreService.getErupt(fieldModel.getFieldReturnName()), value));
+                    map.put(field.getName(), generateEruptDataMap(EruptCoreService.getErupt(fieldModel.getFieldReturnName()), value));
                     break;
                 case CHECKBOX:
                 case TAB_TREE:
@@ -187,8 +185,7 @@ public class EruptUtil {
             } else if (edit.type().equals(EditType.REFERENCE_TABLE)) {
                 id = edit.referenceTableType().id();
             }
-            EruptFieldModel efm = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName()).getEruptFieldMap()
-                    .get(id);
+            EruptFieldModel efm = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName()).getEruptFieldMap().get(id);
             Map<String, Object> map = (Map<String, Object>) obj;
             return TypeUtil.typeStrConvertObject(map.get(id), efm.getField().getType());
         default:
@@ -293,8 +290,7 @@ public class EruptUtil {
                         String content = value.getAsString();
                         if (StringUtils.isNotBlank(content)) {
                             if (!Pattern.matches(edit.inputType().regex(), content)) {
-                                return EruptApiModel
-                                        .errorNoInterceptMessage(field.getEruptField().edit().title() + "格式不正确");
+                                return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "格式不正确");
                             }
                         }
                     }
