@@ -1,18 +1,5 @@
 package xyz.erupt.jpa.dao;
 
-
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
-import javax.persistence.Transient;
-
 import org.apache.commons.lang3.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +12,13 @@ import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.ReflectUtil;
 import xyz.erupt.core.view.EruptFieldModel;
 import xyz.erupt.core.view.EruptModel;
+
+import javax.persistence.*;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author YuePeng date 2018-11-05.
@@ -60,7 +54,8 @@ public class EruptJpaUtils {
                 if (view.column().length() == 0) {
                     cols.add(eruptNameSymbol + field.getFieldName() + AS + field.getFieldName());
                 } else {
-                    cols.add(eruptNameSymbol + field.getFieldName() + "." + view.column()) ;
+                    cols.add(eruptNameSymbol + field.getFieldName() + "." + view.column() + AS + field.getFieldName()
+                            + "_" + view.column().replace(".", "_"));
                 }
             }
         });
@@ -73,9 +68,6 @@ public class EruptJpaUtils {
         if (StringUtils.isNotBlank(cols)) {
             hql.append("select ").append(cols).append(" from ").append(eruptModel.getEruptName()).append(AS)
                     .append(eruptModel.getEruptName());
-            // 修复view配置多级显示时查询结果不正确的缺陷
-            // 如果view配置了多级显示，则必须手动进行left join 关联，否则会因jpa自动生成的cross join 导致查询结果不完整。
-            // 在这里调用改写的 generateEruptJoinHql 方法
             hql.append(generateEruptJoinHql(eruptModel));
 
         } else {
@@ -89,34 +81,33 @@ public class EruptJpaUtils {
     }
 
     public static String generateEruptJoinHql(EruptModel eruptModel) {
-        StringBuffer hql = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         ReflectUtil.findClassAllFields(eruptModel.getClazz(), field -> {
             if (null != field.getAnnotation(ManyToOne.class) || null != field.getAnnotation(OneToOne.class)) {
-                EruptFieldModel model = eruptModel.getEruptFieldMap().get(field.getName());
-                if (model != null && model.getEruptField().views() != null) {
-                    View[] views = model.getEruptField().views();
-                    Set<String> pathSet = new HashSet<String>();
-                    for (View v : views) {
-                        String columnPath = v.column();
-                        if (columnPath.length() != 0 && columnPath.contains(".")) {
-                            String path = eruptModel.getEruptName() + "." + field.getName() + "."
-                                    + columnPath.substring(0, columnPath.lastIndexOf("."));
-                            if (!pathSet.contains(path)) {
-                                hql.append(LEFT_JOIN).append(path).append(AS)
-                                        .append(path.substring(path.lastIndexOf(".") + 1));
-                                pathSet.add(path);
-                            }
+                sb.append(LEFT_JOIN).append(eruptModel.getEruptName()).append('.').append(field.getName()).append(AS)
+                        .append(field.getName());
 
+            }
+            EruptFieldModel model = eruptModel.getEruptFieldMap().get(field.getName());
+            if (model != null && model.getEruptField().views() != null) {
+                View[] views = model.getEruptField().views();
+                Set<String> pathSet = new HashSet<String>();
+                for (View v : views) {
+                    if (v.column().length() != 0 && v.column().contains(".")) {
+                        String path = eruptModel.getEruptName() + "." + field.getName() + "."
+                                + v.column().substring(0, v.column().lastIndexOf("."));
+                        if (!pathSet.contains(path)) {
+                            sb.append(LEFT_JOIN).append(path).append(AS)
+                                    .append(path.substring(path.lastIndexOf(".") + 1));
+                            pathSet.add(path);
                         }
+
                     }
-                    pathSet.clear();
-                } else {
-                    hql.append(LEFT_JOIN).append(eruptModel.getEruptName()).append(".").append(field.getName())
-                            .append(AS).append(field.getName());
                 }
+                pathSet.clear();
             }
         });
-        return hql.toString();
+        return sb.toString();
     }
 
     public static String geneEruptHqlCondition(EruptModel eruptModel, List<Condition> conditions,
@@ -148,12 +139,13 @@ public class EruptJpaUtils {
                         hql.append(EruptJpaUtils.AND).append(_key).append(" like :").append(condition.getKey());
                         break;
                     case RANGE:
-                        hql.append(EruptJpaUtils.AND).append(_key).append(" between :")
-                                .append(L_VAL_KEY).append(condition.getKey()).append(" and :")
-                                .append(R_VAL_KEY).append(condition.getKey());
+                        hql.append(EruptJpaUtils.AND).append(_key).append(" between :").append(L_VAL_KEY)
+                                .append(condition.getKey()).append(" and :").append(R_VAL_KEY)
+                                .append(condition.getKey());
                         break;
                     case IN:
-                        hql.append(EruptJpaUtils.AND).append(_key).append(" in (:").append(condition.getKey()).append(")");
+                        hql.append(EruptJpaUtils.AND).append(_key).append(" in (:").append(condition.getKey())
+                                .append(")");
                         break;
                     }
                 } else {

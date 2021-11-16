@@ -205,7 +205,12 @@
                 </plugins>
             </build>
 
-
+            <distributionManagement>
+                <repository>
+                    <id>localRepository</id>
+                    <url>file:/Users/ecgwela/.m2/repository</url>
+                </repository>
+            </distributionManagement>
         </profile>
     </profiles>
     <distributionManagement>
