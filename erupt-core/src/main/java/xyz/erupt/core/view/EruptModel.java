@@ -1,15 +1,16 @@
 package xyz.erupt.core.view;
 
-import com.google.gson.JsonObject;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.alibaba.fastjson.JSONObject;
+
 import lombok.Getter;
 import lombok.Setter;
 import xyz.erupt.annotation.Erupt;
 import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.CloneSupport;
-
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author YuePeng
@@ -17,9 +18,9 @@ import java.util.stream.Collectors;
  */
 @Getter
 @Setter
-public final class EruptModel implements Cloneable {
+public final class EruptModel<T> implements Cloneable {
 
-    private transient Class<?> clazz;
+    private transient Class<T> clazz;
 
     private transient Erupt erupt;
 
@@ -27,11 +28,11 @@ public final class EruptModel implements Cloneable {
 
     private String eruptName;
 
-    private JsonObject eruptJson;
+    private JSONObject eruptJson;
 
     private List<EruptFieldModel> eruptFieldModels;
 
-    public EruptModel(Class<?> eruptClazz) {
+    public EruptModel(Class<T> eruptClazz) {
         this.clazz = eruptClazz;
         this.erupt = eruptClazz.getAnnotation(Erupt.class);
         this.eruptName = eruptClazz.getSimpleName();
@@ -39,8 +40,8 @@ public final class EruptModel implements Cloneable {
     }
 
     @Override
-    public final EruptModel clone() throws CloneNotSupportedException {
-        EruptModel eruptModel = (EruptModel) super.clone();
+    public final EruptModel<T> clone() throws CloneNotSupportedException {
+        EruptModel<T> eruptModel = (EruptModel<T>) super.clone();
         eruptModel.eruptFieldModels = eruptFieldModels.stream().map(CloneSupport::clone).collect(Collectors.toList());
         return eruptModel;
     }

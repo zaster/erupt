@@ -1,12 +1,16 @@
 package xyz.erupt.annotation;
 
+import java.beans.Transient;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.config.ToMap;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.Edit;
-import xyz.erupt.annotation.sub_field.View;
-
-import java.beans.Transient;
-import java.lang.annotation.*;
 
 /**
  * @author YuePeng
@@ -18,7 +22,7 @@ import java.lang.annotation.*;
 public @interface EruptField {
 
     @Comment("表格列配置")
-    View[] views() default {};
+    STColumn[] columns() default {};
 
     @Comment("编辑组件配置")
     Edit edit() default @Edit(title = "");

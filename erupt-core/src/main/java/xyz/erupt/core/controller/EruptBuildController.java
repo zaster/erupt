@@ -1,10 +1,15 @@
 package xyz.erupt.core.controller;
 
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Optional;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import xyz.erupt.annotation.sub_erupt.RowOperation;
 import xyz.erupt.core.annotation.EruptRouter;
 import xyz.erupt.core.constant.EruptRestPath;
@@ -12,10 +17,6 @@ import xyz.erupt.core.invoke.PowerInvoke;
 import xyz.erupt.core.service.EruptCoreService;
 import xyz.erupt.core.view.EruptBuildModel;
 import xyz.erupt.core.view.EruptModel;
-
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Optional;
 
 /**
  * Erupt 页面结构构建信息
@@ -30,7 +31,7 @@ public class EruptBuildController {
     @GetMapping("/{erupt}")
     @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     public EruptBuildModel getEruptBuild(@PathVariable("erupt") String eruptName) {
-        EruptModel eruptView = EruptCoreService.getEruptView(eruptName);
+        EruptModel<Object> eruptView = EruptCoreService.getEruptView(eruptName);
         EruptBuildModel eruptBuildModel = new EruptBuildModel();
         eruptBuildModel.setPower(PowerInvoke.getPowerObject(eruptView));
         eruptBuildModel.setEruptModel(eruptView);

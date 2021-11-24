@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 public class ReflectUtil {
 
     //递归查找类字段
-    public static Field findClassField(Class<?> clazz, String fieldName) {
+    public static <T>Field findClassField(Class<T> clazz, String fieldName) {
         Field field;
         while (clazz != null) {
             try {
@@ -24,7 +24,7 @@ public class ReflectUtil {
                 field.setAccessible(true);
                 return field;
             } catch (NoSuchFieldException e) {
-                if (Object.class.equals(clazz = clazz.getSuperclass())) {
+                if (Object.class.equals(clazz = (Class<T>)clazz.getSuperclass())) {
                     break;
                 }
             }
@@ -47,7 +47,7 @@ public class ReflectUtil {
         return obj;
     }
 
-    public static void findClassAllFields(Class<?> clazz, Consumer<Field> fieldConsumer) {
+    public static <T> void findClassAllFields(Class<T> clazz, Consumer<Field> fieldConsumer) {
         Class<?> tempClass = clazz;
         while (null != tempClass) {
             for (Field field : tempClass.getDeclaredFields()) {

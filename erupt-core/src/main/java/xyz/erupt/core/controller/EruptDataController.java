@@ -3,6 +3,7 @@ package xyz.erupt.core.controller;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -10,10 +11,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -42,7 +43,6 @@ import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTableType;
 import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTreeType;
 import xyz.erupt.core.annotation.EruptRecordOperate;
 import xyz.erupt.core.annotation.EruptRouter;
-import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.constant.EruptRestPath;
 import xyz.erupt.core.exception.EruptNoLegalPowerException;
 import xyz.erupt.core.exception.EruptWebApiRuntimeException;
@@ -61,6 +61,7 @@ import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.EruptSpringUtil;
 import xyz.erupt.core.util.EruptUtil;
 import xyz.erupt.core.util.Erupts;
+import xyz.erupt.core.util.FastJsonUtil;
 import xyz.erupt.core.view.CheckboxModel;
 import xyz.erupt.core.view.EruptApiModel;
 import xyz.erupt.core.view.EruptFieldModel;
@@ -82,20 +83,19 @@ public class EruptDataController {
 
         private final PreEruptDataService preEruptDataService;
 
-        private final Gson gson = GsonFactory.getGson();
 
         private final I18NTranslateService i18NTranslateService;
 
         @PostMapping({ "/table/{erupt}" })
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-        public Page getEruptData(@PathVariable("erupt") String eruptName, @RequestBody TableQueryVo tableQueryVo) {
+        public Page<?> getEruptData(@PathVariable("erupt") String eruptName, @RequestBody TableQueryVo tableQueryVo) {
                 return eruptService.getEruptData(EruptCoreService.getErupt(eruptName), tableQueryVo, null);
         }
 
         @GetMapping("/tree/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
         public Collection<TreeModel> getEruptTreeData(@PathVariable("erupt") String eruptName) {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<?> eruptModel = EruptCoreService.getErupt(eruptName);
                 Erupts.powerLegal(eruptModel, PowerObject::isQuery);
                 Tree tree = eruptModel.getErupt().tree();
                 return preEruptDataService.geneTree(eruptModel, tree.id(), tree.label(), tree.pid(), tree.rootPid(),
@@ -105,25 +105,25 @@ public class EruptDataController {
         // 获取初始化数据
         @GetMapping("/init-value/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-        public Map<String, Object> initEruptValue(@PathVariable("erupt") String eruptName)
+        public Object initEruptValue(@PathVariable("erupt") String eruptName)
                         throws IllegalAccessException, InstantiationException {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
                 Object obj = eruptModel.getClazz().newInstance();
                 DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.addBehavior(obj)));
-                return EruptUtil.generateEruptDataMap(eruptModel, obj);
+                return obj;
         }
 
         @GetMapping("/{erupt}/{id}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
-        public Map<String, Object> getEruptDataById(@PathVariable("erupt") String eruptName,
+        public Object getEruptDataById(@PathVariable("erupt") String eruptName,
                         @PathVariable("id") String id) {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
                 Erupts.powerLegal(eruptModel, powerObject -> powerObject.isEdit() || powerObject.isViewDetails());
                 eruptService.verifyIdPermissions(eruptModel, id);
                 Object data = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz()).findDataById(eruptModel,
                                 EruptUtil.toEruptId(eruptModel, id));
                 DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.editBehavior(data)));
-                return EruptUtil.generateEruptDataMap(eruptModel, data);
+                return data;
         }
 
         public static final String OPERATOR_PATH_STR = "/operator";
@@ -132,10 +132,10 @@ public class EruptDataController {
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, @RequestBody JsonObject body) {
+                        @PathVariable("code") String code, @RequestBody JSONObject body) {
 
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                JsonObject paramobj = (!body.get("param").isJsonNull()) ? body.getAsJsonObject("param") : null;
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
+                JSONObject paramobj = (!FastJsonUtil.isEmpty(body.get("param"))) ? body.getJSONObject("param") : null;
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
@@ -149,9 +149,9 @@ public class EruptDataController {
                 }
 
                 if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
-                        EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
+                        EruptModel<?> erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
                         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,
-                                        body.getAsJsonObject("param"));
+                                        body.getJSONObject("param"));
                         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
                                 return eruptApiModel;
                 }
@@ -159,26 +159,27 @@ public class EruptDataController {
                 Object param = null;
                 // 表单形式参数
                 if (paramobj != null && rowOperation.eruptMode() == EruptMode.FORM) {
-                        param = gson.fromJson(paramobj, rowOperation.eruptClass());
+                        param = JSON.toJavaObject(paramobj, rowOperation.eruptClass());
                 } else {
                         param = paramobj;
                 }
                 // 表格形式参数
                 List<Object> list = new ArrayList<>();
-                if (body.get("ids").isJsonArray() && body.getAsJsonArray("ids").size() > 0) {
+                Object o = body.get("ids");
+                if (FastJsonUtil.isJSONArray(o) && !FastJsonUtil.isEmpty(o)) {
 
-                        for (JsonElement id : body.getAsJsonArray("ids")) {
+                        for (Object id : body.getJSONArray("ids")) {
                                 Object obj = null;
                                 if (rowOperation.eruptMode() == EruptMode.FORM) {
                                         obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
                                                         .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel,
-                                                                        id.getAsString()));
+                                                                        id.toString()));
                                 } else {
-                                        EruptModel tableEruptModel = EruptCoreService
+                                        EruptModel<Object> tableEruptModel = EruptCoreService
                                                         .getErupt(rowOperation.eruptClass().getSimpleName());
                                         obj = DataProcessorManager.getEruptDataProcessor(tableEruptModel.getClazz())
                                                         .findDataById(tableEruptModel, EruptUtil
-                                                                        .toEruptId(tableEruptModel, id.getAsString()));
+                                                                        .toEruptId(tableEruptModel, id.toString()));
                                 }
 
                                 list.add(obj);
@@ -201,7 +202,7 @@ public class EruptDataController {
                         @PathVariable("code") String code, @RequestParam("parent") String parent,
                         @RequestParam("parentId") String parentId, @RequestParam("file") MultipartFile file) {
 
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<?> eruptModel = EruptCoreService.getErupt(eruptName);
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
@@ -244,9 +245,9 @@ public class EruptDataController {
         @EruptRouter(authIndex = 3, verifyType = EruptRouter.VerifyType.ERUPT)
         public Collection<TreeModel> findTabTree(@PathVariable("erupt") String eruptName,
                         @PathVariable("tabFieldName") String tabFieldName) {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
                 Erupts.powerLegal(eruptModel, powerObject -> powerObject.isViewDetails() || powerObject.isEdit());
-                EruptModel tabEruptModel = EruptCoreService
+                EruptModel<Object> tabEruptModel = EruptCoreService
                                 .getErupt(eruptModel.getEruptFieldMap().get(tabFieldName).getFieldReturnName());
                 Tree tree = tabEruptModel.getErupt().tree();
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(tabFieldName);
@@ -260,33 +261,39 @@ public class EruptDataController {
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         public Collection<CheckboxModel> findCheckbox(@PathVariable("erupt") String eruptName,
                         @PathVariable("fieldName") String fieldName) {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
                 Erupts.powerLegal(eruptModel, powerObject -> powerObject.isViewDetails() || powerObject.isEdit());
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(fieldName);
-                EruptModel tabEruptModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
+                EruptModel<Object> tabEruptModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
                 CheckboxType checkboxType = eruptFieldModel.getEruptField().edit().checkboxType();
                 List<Column> columns = new ArrayList<>();
                 columns.add(new Column(checkboxType.id(), AnnotationConst.ID));
                 columns.add(new Column(checkboxType.label(), AnnotationConst.LABEL));
                 EruptQuery eruptQuery = EruptQuery.builder().conditionStrings(AnnotationUtil
                                 .switchFilterConditionToStr(eruptFieldModel.getEruptField().edit().filter())).build();
-                Collection<Map<String, Object>> collection = preEruptDataService.createColumnQuery(tabEruptModel,
+                Collection<?> collection = preEruptDataService.createColumnQuery(tabEruptModel,
                                 columns, eruptQuery);
                 Collection<CheckboxModel> checkboxModels = new ArrayList<>(collection.size());
-                collection.forEach(map -> checkboxModels
-                                .add(new CheckboxModel(map.get(AnnotationConst.ID), map.get(AnnotationConst.LABEL))));
+                collection.forEach(record -> {
+                        try {
+                                checkboxModels.add(new CheckboxModel(PropertyUtils.getProperty(record, AnnotationConst.ID), PropertyUtils.getProperty(record, AnnotationConst.LABEL)));
+                        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                        }
+                });
                 return checkboxModels;
         }
 
         // REFERENCE API
         @PostMapping("/{erupt}/reference-table/{fieldName}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
-        public Page getReferenceTable(@PathVariable("erupt") String eruptName,
+        public Page<?> getReferenceTable(@PathVariable("erupt") String eruptName,
                         @PathVariable("fieldName") String fieldName,
                         @RequestParam(value = "dependValue", required = false) Serializable dependValue,
                         @RequestParam(value = "tabRef", required = false) Boolean tabRef,
                         @RequestBody TableQueryVo tableQueryVo) {
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<?> eruptModel = EruptCoreService.getErupt(eruptName);
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(fieldName);
                 Erupts.powerLegal(eruptModel, powerObject -> powerObject.isEdit() || powerObject.isAdd()
                                 || eruptFieldModel.getEruptField().edit().search().value());
@@ -301,7 +308,7 @@ public class EruptDataController {
                 }
                 List<String> conditions = AnnotationUtil.switchFilterConditionToStr(edit.filter());
                 conditions.add(dependCondition);
-                EruptModel eruptReferenceModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
+                EruptModel<?> eruptReferenceModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
                 if (!tabRef) {
                         // 由于类加载顺序问题，并没有选择在启动时检测
                         ReferenceTableType referenceTableType = eruptFieldModel.getEruptField().edit()
@@ -320,7 +327,7 @@ public class EruptDataController {
         @GetMapping("/depend-tree/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
         public Collection<TreeModel> getDependTree(@PathVariable("erupt") String erupt) {
-                EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+                EruptModel<?> eruptModel = EruptCoreService.getErupt(erupt);
                 String field = eruptModel.getErupt().linkTree().field();
                 if (null == eruptModel.getEruptFieldMap().get(field)) {
                         String treeErupt = eruptModel.getClazz().getDeclaredField(field).getType().getSimpleName();
@@ -335,7 +342,7 @@ public class EruptDataController {
         public Collection<TreeModel> getReferenceTree(@PathVariable("erupt") String erupt,
                         @PathVariable("fieldName") String fieldName,
                         @RequestParam(value = "dependValue", required = false) Serializable dependValue) {
-                EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(fieldName);
                 Erupts.powerLegal(eruptModel,
                                 powerObject -> powerObject.isEdit() || powerObject.isAdd()
@@ -348,7 +355,7 @@ public class EruptDataController {
                 }
                 Edit edit = eruptFieldModel.getEruptField().edit();
                 ReferenceTreeType treeType = edit.referenceTreeType();
-                EruptModel referenceEruptModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
+                EruptModel<Object> referenceEruptModel = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName());
                 Erupts.requireTrue(referenceEruptModel.getEruptFieldMap().containsKey(treeType.label().split("\\.")[0]),
                                 referenceEruptModel.getEruptName() + " not found " + treeType.label()
                                                 + " field, please use @ReferenceTreeType annotation config");
@@ -365,12 +372,12 @@ public class EruptDataController {
 
         @PostMapping("/validate-erupt/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JsonObject data) {
-                EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JSONObject data) {
+                EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
                 EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
                 if (eruptApiModel.getStatus() == EruptApiModel.Status.SUCCESS) {
                         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy
-                                        .beforeAdd(gson.fromJson(data.toString(), eruptModel.getClazz()))));
+                                        .beforeAdd(JSON.toJavaObject(data, eruptModel.getClazz()))));
                 }
                 eruptApiModel.setErrorIntercept(false);
                 eruptApiModel.setPromptWay(EruptApiModel.PromptWay.MESSAGE);

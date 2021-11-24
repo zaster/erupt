@@ -1,5 +1,9 @@
 package xyz.erupt.upms.model;
 
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+
 import lombok.Getter;
 import lombok.Setter;
 import xyz.erupt.annotation.Erupt;
@@ -9,13 +13,9 @@ import xyz.erupt.annotation.sub_erupt.Drill;
 import xyz.erupt.annotation.sub_erupt.Link;
 import xyz.erupt.annotation.sub_erupt.Power;
 import xyz.erupt.annotation.sub_field.Edit;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
 import xyz.erupt.upms.model.base.HyperModel;
-
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
 
 /**
  * @author YuePeng
@@ -40,19 +40,19 @@ import javax.persistence.UniqueConstraint;
 public class EruptDict extends HyperModel {
 
     @EruptField(
-            views = @View(title = "编码", sortable = true),
+            columns = @STColumn(title = "编码", sort = true),
             edit = @Edit(title = "编码", notNull = true, search = @Search(vague = true))
     )
     private String code;
 
     @EruptField(
-            views = @View(title = "名称", sortable = true),
+            columns = @STColumn(title = "名称", sort = true),
             edit = @Edit(title = "名称", notNull = true, search = @Search(vague = true))
     )
     private String name;
 
     @EruptField(
-            views = @View(title = "备注"),
+            columns = @STColumn(title = "备注"),
             edit = @Edit(
                     title = "备注"
             )

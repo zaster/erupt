@@ -53,7 +53,7 @@ public class EruptJpaDao {
         });
     }
 
-    public Page queryEruptList(EruptModel eruptModel, Page page, EruptQuery eruptQuery) {
+    public <T> Page<T> queryEruptList(EruptModel<T> eruptModel, Page<T> page, EruptQuery eruptQuery) {
         String hql = EruptJpaUtils.generateEruptJpaHql(eruptModel, eruptModel.getEruptName(), eruptQuery, false);
         String countHql = EruptJpaUtils.generateEruptJpaHql(eruptModel, "count(*)", eruptQuery, true);
         return entityManagerService.getEntityManager(eruptModel.getClazz(), entityManager -> {
@@ -92,16 +92,17 @@ public class EruptJpaDao {
             }
             page.setTotal((Long) countQuery.getSingleResult());
             if (page.getTotal() > 0) {
-                List<Object> objects = query.setMaxResults(page.getPageSize())
+                List<T> objects = query.setMaxResults(page.getPageSize())
                         .setFirstResult((page.getPageIndex() - 1) * page.getPageSize()).getResultList();
-                List<Map<String, Object>> results = new ArrayList<Map<String, Object>>();
-                for (Object obj : objects) {
-                    results.add(EruptUtil.generateEruptDataMap(eruptModel, obj));
-                }
+                //List<T> results = new ArrayList<T>();
+                //for (Object obj : objects) {
+                    
+                    ///results.add(EruptUtil.generateEruptDataMap(eruptModel, obj));
+                ///}
 
-                page.setList(results);
+                page.setList(objects);
             } else {
-                page.setList(new ArrayList<>(0));
+                page.setList(new ArrayList<T>(0));
             }
             return page;
         });

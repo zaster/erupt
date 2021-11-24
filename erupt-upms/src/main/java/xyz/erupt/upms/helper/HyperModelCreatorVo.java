@@ -1,9 +1,19 @@
 package xyz.erupt.upms.helper;
 
+import java.util.Date;
+
+import javax.annotation.Resource;
+import javax.persistence.FetchType;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import org.springframework.stereotype.Service;
+
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Service;
 import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.PreDataProxy;
 import xyz.erupt.annotation.config.SkipSerialize;
@@ -11,18 +21,11 @@ import xyz.erupt.annotation.fun.DataProxy;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
 import xyz.erupt.annotation.sub_field.Readonly;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.DateType;
 import xyz.erupt.jpa.model.BaseModel;
 import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.service.EruptUserService;
-
-import javax.annotation.Resource;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
-import java.util.Date;
 
 /**
  * @author YuePeng
@@ -36,13 +39,13 @@ public class HyperModelCreatorVo extends BaseModel {
 
     @ManyToOne
     @EruptField(
-            views = @View(title = "创建人", width = "100px", column = "name"),
+            columns = @STColumn(title = "创建人", width = "100px", index = "name"),
             edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE)
     )
     private EruptUserVo createUser;
 
     @EruptField(
-            views = @View(title = "创建时间", sortable = true),
+            columns = @STColumn(title = "创建时间", sort = true),
             edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME))
     )
     private Date createTime;

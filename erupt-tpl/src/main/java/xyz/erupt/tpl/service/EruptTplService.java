@@ -1,7 +1,17 @@
 package xyz.erupt.tpl.service;
 
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
+import java.io.Writer;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -10,6 +20,9 @@ import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedCaseInsensitiveMap;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.fun.VLModel;
 import xyz.erupt.annotation.sub_erupt.Tpl;
 import xyz.erupt.core.service.EruptApplication;
@@ -17,19 +30,14 @@ import xyz.erupt.core.toolkit.TimeRecorder;
 import xyz.erupt.core.util.EruptSpringUtil;
 import xyz.erupt.tpl.annotation.EruptTpl;
 import xyz.erupt.tpl.annotation.TplAction;
-import xyz.erupt.tpl.engine.*;
+import xyz.erupt.tpl.engine.BeetlEngine;
+import xyz.erupt.tpl.engine.EngineConst;
+import xyz.erupt.tpl.engine.EngineTemplate;
+import xyz.erupt.tpl.engine.FreemarkerEngine;
+import xyz.erupt.tpl.engine.NativeEngine;
+import xyz.erupt.tpl.engine.ThymeleafEngine;
+import xyz.erupt.tpl.engine.VelocityTplEngine;
 import xyz.erupt.upms.enums.MenuTypeEnum;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.Writer;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author YuePeng
@@ -81,7 +89,7 @@ public class EruptTplService implements ApplicationRunner {
                         method -> Optional.ofNullable(method.getAnnotation(TplAction.class)).ifPresent(
                                 it -> tplActions.put(it.value(), method)))
         );
-        MenuTypeEnum.addMenuType(new VLModel(TPL, "模板", "tpl目录下文件名"));
+        MenuTypeEnum.addMenuType(new VLModel(TPL, "模板","default", "tpl目录下文件名",false));
         log.info("Erupt tpl initialization completed in {} ms", timeRecorder.recorder());
     }
 

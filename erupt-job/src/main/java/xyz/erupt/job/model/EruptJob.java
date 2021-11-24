@@ -1,9 +1,20 @@
 package xyz.erupt.job.model;
 
-import lombok.Getter;
-import lombok.Setter;
+import java.text.ParseException;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import javax.persistence.UniqueConstraint;
+
 import org.quartz.SchedulerException;
 import org.springframework.stereotype.Component;
+
+import lombok.Getter;
+import lombok.Setter;
 import xyz.erupt.annotation.Erupt;
 import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.EruptI18n;
@@ -15,7 +26,7 @@ import xyz.erupt.annotation.sub_erupt.Link;
 import xyz.erupt.annotation.sub_erupt.RowOperation;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.annotation.sub_field.sub_edit.ChoiceType;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
@@ -24,11 +35,6 @@ import xyz.erupt.core.exception.EruptWebApiRuntimeException;
 import xyz.erupt.job.service.ChoiceFetchEruptJobHandler;
 import xyz.erupt.job.service.EruptJobService;
 import xyz.erupt.upms.model.base.HyperModel;
-
-import javax.annotation.Resource;
-import javax.persistence.*;
-import java.text.ParseException;
-import java.util.List;
 
 /**
  * @author YuePeng
@@ -49,25 +55,25 @@ import java.util.List;
 public class EruptJob extends HyperModel implements DataProxy<EruptJob>, OperationHandler<EruptJob, Void> {
 
     @EruptField(
-            views = @View(title = "任务编码"),
+            columns = @STColumn(title = "任务编码"),
             edit = @Edit(title = "任务编码", notNull = true, search = @Search)
     )
     private String code;
 
     @EruptField(
-            views = @View(title = "任务名称"),
+            columns = @STColumn(title = "任务名称"),
             edit = @Edit(title = "任务名称", notNull = true, search = @Search(vague = true))
     )
     private String name;
 
     @EruptField(
-            views = @View(title = "Cron表达式"),
+            columns = @STColumn(title = "Cron表达式"),
             edit = @Edit(title = "Cron表达式", notNull = true)
     )
     private String cron;
 
     @EruptField(
-            views = @View(title = "JOB处理类"),
+            columns = @STColumn(title = "JOB处理类"),
             edit = @Edit(title = "JOB处理类", desc = "需实现EruptJobHandler接口",
                     choiceType = @ChoiceType(fetchHandler = ChoiceFetchEruptJobHandler.class)
                     , notNull = true, search = @Search, type = EditType.CHOICE)
@@ -75,7 +81,7 @@ public class EruptJob extends HyperModel implements DataProxy<EruptJob>, Operati
     private String handler;
 
     @EruptField(
-            views = @View(title = "任务状态"),
+            columns = @STColumn(title = "任务状态"),
             edit = @Edit(title = "任务状态", boolType = @BoolType(
                     trueText = "启用", falseText = "禁用"
             ), notNull = true, search = @Search)
@@ -84,21 +90,21 @@ public class EruptJob extends HyperModel implements DataProxy<EruptJob>, Operati
 
     @Column(length = AnnotationConst.REMARK_LENGTH)
     @EruptField(
-            views = @View(title = "失败通知邮箱"),
+            columns = @STColumn(title = "失败通知邮箱"),
             edit = @Edit(title = "失败通知邮箱", desc = "使用此功能需配置发信邮箱", type = EditType.TAGS, tagsType = @TagsType)
     )
     private String notifyEmails;
 
     @Column(length = AnnotationConst.REMARK_LENGTH)
     @EruptField(
-            views = @View(title = "任务参数"),
+            columns = @STColumn(title = "任务参数"),
             edit = @Edit(title = "任务参数", type = EditType.TEXTAREA)
     )
     private String handlerParam;
 
     @Column(length = AnnotationConst.REMARK_LENGTH)
     @EruptField(
-            views = @View(title = "描述"),
+            columns = @STColumn(title = "描述"),
             edit = @Edit(title = "描述")
     )
     private String remark;

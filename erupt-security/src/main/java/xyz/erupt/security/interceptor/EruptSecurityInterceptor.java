@@ -1,11 +1,24 @@
 package xyz.erupt.security.interceptor;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Optional;
+
+import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.transaction.Transactional;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
+
 import xyz.erupt.annotation.sub_erupt.RowOperation;
 import xyz.erupt.core.annotation.EruptRecordOperate;
 import xyz.erupt.core.annotation.EruptRouter;
@@ -22,16 +35,6 @@ import xyz.erupt.upms.model.log.EruptOperateLog;
 import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 import xyz.erupt.upms.util.IpUtil;
-
-import javax.annotation.Resource;
-import javax.persistence.EntityManager;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.transaction.Transactional;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Optional;
 
 /**
  * @author YuePeng
@@ -108,10 +111,10 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
                 }
                 break;
             case ERUPT:
-                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel<T> eruptModel = EruptCoreService.getErupt(eruptName);
                 $ep:
                 if (StringUtils.isNotBlank(parentEruptName)) {
-                    EruptModel eruptParentModel = EruptCoreService.getErupt(parentEruptName);
+                    EruptModel<T> eruptParentModel = EruptCoreService.getErupt(parentEruptName);
                     for (EruptFieldModel model : eruptParentModel.getEruptFieldModels()) {
                         if (eruptModel.getEruptName().equals(model.getFieldReturnName())) {
                             if (authStr.equals(eruptModel.getEruptName())) {

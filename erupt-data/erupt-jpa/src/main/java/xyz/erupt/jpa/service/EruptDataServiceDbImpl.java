@@ -1,5 +1,21 @@
 package xyz.erupt.jpa.service;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Resource;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+import javax.transaction.Transactional;
+
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,15 +38,6 @@ import xyz.erupt.core.view.Page;
 import xyz.erupt.jpa.dao.EruptJpaDao;
 import xyz.erupt.jpa.dao.EruptJpaUtils;
 import xyz.erupt.jpa.support.JpaSupport;
-
-import javax.annotation.Resource;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-import javax.transaction.Transactional;
-import java.lang.reflect.Field;
-import java.util.*;
 
 /**
  * @author YuePeng
@@ -56,18 +63,18 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     private I18NTranslateService i18NTranslateService;
 
     @Override
-    public Object findDataById(EruptModel eruptModel, Object id) {
+    public <TT>TT findDataById(EruptModel<TT> eruptModel, Object id) {
         return entityManagerService.getEntityManager(eruptModel.getClazz(), (em) -> em.find(eruptModel.getClazz(), id));
     }
 
     @Override
-    public Page queryList(EruptModel eruptModel, Page page, EruptQuery query) {
+    public <TT>Page<TT> queryList(EruptModel<TT> eruptModel, Page<TT> page, EruptQuery query) {
         return eruptJpaDao.queryEruptList(eruptModel, page, query);
     }
 
     @Transactional
     @Override
-    public void addData(EruptModel eruptModel, Object data) {
+    public <TT>void addData(EruptModel<TT> eruptModel, Object data) {
         try {
             this.loadSupport(data);
             this.jpaManyToOneConvert(eruptModel, data);
@@ -79,7 +86,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
 
     @Transactional
     @Override
-    public void editData(EruptModel eruptModel, Object data) {
+    public <TT>void editData(EruptModel<TT> eruptModel, Object data) {
         try {
             this.loadSupport(data);
             eruptJpaDao.editEntity(eruptModel.getClazz(), data);
@@ -95,7 +102,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //优化异常提示类
-    private void handlerException(Exception e, EruptModel eruptModel) {
+    private <TT>void handlerException(Exception e, EruptModel<TT> eruptModel) {
         e.printStackTrace();
         if (e instanceof DataIntegrityViolationException) {
             if (e.getMessage().contains("ConstraintViolationException")) {
@@ -112,7 +119,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
 
     @Transactional
     @Override
-    public void deleteData(EruptModel eruptModel, Object object) {
+    public <TT>void deleteData(EruptModel<TT> eruptModel, Object object) {
         try {
             eruptJpaDao.removeEntity(eruptModel.getClazz(), object);
         } catch (DataIntegrityViolationException | ConstraintViolationException e) {
@@ -124,12 +131,11 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //@ManyToOne数据处理
-    private void jpaManyToOneConvert(EruptModel eruptModel, Object object) throws IllegalAccessException {
+    private <TT>void jpaManyToOneConvert(EruptModel<TT> eruptModel, Object object) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
         for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
             if (fieldModel.getEruptField().edit().type() == EditType.TAB_TABLE_ADD) {
                 Field field = ReflectUtil.findClassField(object.getClass(), fieldModel.getFieldName());
-                field.setAccessible(true);
-                Collection<?> collection = (Collection<?>) field.get(object);
+                Collection<?> collection = (Collection<?>)PropertyUtils.getProperty(object, field.getName()) ;
                 if (null != collection) {
                     for (Object o : collection) {
                         //强制删除主键
@@ -143,13 +149,13 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //生成数据重复的提示字符串
-    private String gcRepeatHint(EruptModel eruptModel) {
+    private <TT>String gcRepeatHint(EruptModel<TT> eruptModel) {
         StringBuilder str = new StringBuilder();
         for (UniqueConstraint uniqueConstraint : eruptModel.getClazz().getAnnotation(Table.class).uniqueConstraints()) {
             for (String columnName : uniqueConstraint.columnNames()) {
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(columnName);
                 if (null != eruptFieldModel) {
-                    str.append(eruptFieldModel.getEruptField().views()[0].title()).append("、");
+                    str.append(eruptFieldModel.getEruptField().columns()[0].title()).append("、");
                 }
             }
         }
@@ -170,7 +176,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
      * @return 数据结果集
      */
     @Override
-    public Collection<Map<String, Object>> queryColumn(EruptModel eruptModel, List<Column> columns, EruptQuery query) {
+    public <TT>Collection<TT> queryColumn(EruptModel<TT> eruptModel, List<Column> columns, EruptQuery query) {
         StringBuilder hql = new StringBuilder();
         List<String> columnStrList = new ArrayList<>();
         columns.forEach(column -> columnStrList.add(EruptJpaUtils.completeHqlPath(eruptModel.getEruptName()

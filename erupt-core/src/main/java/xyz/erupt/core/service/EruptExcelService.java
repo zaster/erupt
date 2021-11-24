@@ -1,33 +1,60 @@
 package xyz.erupt.core.service;
 
-import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.alibaba.fastjson.JSONObject;
+
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.DVConstraint;
 import org.apache.poi.hssf.usermodel.HSSFDataValidation;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.formula.functions.T;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.annotation.constant.JavaType;
 import xyz.erupt.annotation.fun.VLModel;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.core.invoke.DataProcessorManager;
 import xyz.erupt.core.query.Column;
 import xyz.erupt.core.query.EruptQuery;
+import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.DateUtil;
-import xyz.erupt.core.util.*;
+import xyz.erupt.core.util.EruptUtil;
+import xyz.erupt.core.util.ExcelUtil;
+import xyz.erupt.core.util.HttpUtil;
 import xyz.erupt.core.view.EruptFieldModel;
 import xyz.erupt.core.view.EruptModel;
 import xyz.erupt.core.view.Page;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * @author YuePeng
@@ -46,8 +73,11 @@ public class EruptExcelService {
      * excel导出，展示的格式和view表格一致
      *
      * @return Workbook
+     * @throws NoSuchMethodException
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
      */
-    public Workbook exportExcel(EruptModel eruptModel, Page page) {
+    public Workbook exportExcel(EruptModel<T> eruptModel, Page<?> page) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 //        XSSFWorkbook
 //        SXSSFWorkbook
         Workbook wb = new SXSSFWorkbook();
@@ -67,29 +97,31 @@ public class EruptExcelService {
         headFont.setBold(true);
         headStyle.setFont(headFont);
         for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
-            for (View view : fieldModel.getEruptField().views()) {
-                if (view.show() && view.export()) {
+            for (STColumn column : fieldModel.getEruptField().columns()) {
+                if (column.show() && column.exported()) {
                     Cell cell = row.createCell(colNum);
                     cell.setCellStyle(headStyle);
-                    cell.setCellValue(view.title());
+                    cell.setCellValue(column.title());
                     colNum++;
                 }
             }
         }
         CellStyle style = ExcelUtil.beautifyExcelStyle(wb);
-        for (Map<String, Object> map : page.getList()) {
+        for (Object record : page.getList()) {
             int dataColNum = 0;
             row = sheet.createRow(++rowIndex);
             for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
-                for (View view : fieldModel.getEruptField().views()) {
-                    if (view.show() && view.export()) {
+                for (STColumn column : fieldModel.getEruptField().columns()) {
+                    if (column.show() && column.exported()) {
                         Cell cell = row.createCell(dataColNum);
                         cell.setCellStyle(style);
                         Object val;
-                        if (StringUtils.isNotBlank(view.column())) {
-                            val = map.get(fieldModel.getFieldName() + "_" + view.column());
+                        Object fRecord = PropertyUtils.getProperty(record,fieldModel.getFieldName());
+                        if (StringUtils.isNotBlank(column.index())) {
+                            
+                            val =PropertyUtils.getProperty(fRecord,column.index()) ;
                         } else {
-                            val = map.get(fieldModel.getFieldName());
+                            val = fRecord;
                         }
                         if (null != val) {
                             cell.setCellValue(val.toString());
@@ -102,7 +134,7 @@ public class EruptExcelService {
         return wb;
     }
 
-    public List<JsonObject> excelToEruptObject(EruptModel eruptModel, Workbook workbook) throws Exception {
+    public List<JSONObject> excelToEruptObject(EruptModel<T> eruptModel, Workbook workbook) throws Exception {
         Sheet sheet = workbook.getSheetAt(0);
         Row titleRow = sheet.getRow(0);
         Map<String, EruptFieldModel> editTitleMappingEruptField = new HashMap<>(eruptModel.getEruptFieldModels().size());
@@ -168,13 +200,13 @@ public class EruptExcelService {
                     break;
             }
         }
-        List<JsonObject> listObject = new ArrayList<>();
+        List<JSONObject> listObject = new ArrayList<>();
         for (int rowNum = 1; rowNum <= sheet.getLastRowNum(); rowNum++) {
             Row row = sheet.getRow(rowNum);
             if (row.getPhysicalNumberOfCells() == 0) {
                 continue;
             }
-            JsonObject jsonObject = new JsonObject();
+            JSONObject jsonObject = new JSONObject();
             for (int cellNum = 0; cellNum < titleRow.getPhysicalNumberOfCells(); cellNum++) {
                 Cell cell = row.getCell(cellNum);
                 EruptFieldModel eruptFieldModel = cellIndexMapping.get(cellNum);
@@ -183,23 +215,23 @@ public class EruptExcelService {
                     switch (edit.type()) {
                         case REFERENCE_TABLE:
                         case REFERENCE_TREE:
-                            JsonObject jo = new JsonObject();
+                            JSONObject jo = new JSONObject();
                             try {
                                 if (edit.type() == EditType.REFERENCE_TREE) {
-                                    jo.addProperty(edit.referenceTreeType().id(),
+                                    jo.put(edit.referenceTreeType().id(),
                                             cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue()).toString());
                                 } else if (edit.type() == EditType.REFERENCE_TABLE) {
-                                    jo.addProperty(edit.referenceTableType().id(),
+                                    jo.put(edit.referenceTableType().id(),
                                             cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue()).toString());
                                 }
                             } catch (Exception e) {
                                 throw new Exception(edit.title() + " -> " + this.getStringCellValue(cell) + "数据不存在");
                             }
-                            jsonObject.add(eruptFieldModel.getFieldName(), jo);
+                            jsonObject.put(eruptFieldModel.getFieldName(), jo);
                             break;
                         case CHOICE:
                             try {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), cellIndexJoinEruptMap.get(cellNum)
+                                jsonObject.put(eruptFieldModel.getFieldName(), cellIndexJoinEruptMap.get(cellNum)
                                         .get(cell.getStringCellValue()).toString());
                             } catch (Exception e) {
                                 throw new Exception(edit.title() + " -> " + this.getStringCellValue(cell) + "数据不存在");
@@ -207,16 +239,16 @@ public class EruptExcelService {
                             break;
                         case BOOLEAN:
                             Boolean bool = (Boolean) cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue());
-                            jsonObject.addProperty(eruptFieldModel.getFieldName(), bool);
+                            jsonObject.put(eruptFieldModel.getFieldName(), bool);
                             break;
                         default:
                             String rn = eruptFieldModel.getFieldReturnName();
                             if (String.class.getSimpleName().equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), this.getStringCellValue(cell));
+                                jsonObject.put(eruptFieldModel.getFieldName(), this.getStringCellValue(cell));
                             } else if (JavaType.NUMBER.equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), cell.getNumericCellValue());
+                                jsonObject.put(eruptFieldModel.getFieldName(), cell.getNumericCellValue());
                             } else if (Date.class.getSimpleName().equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), DateUtil.getSimpleFormatDate(cell.getDateCellValue()));
+                                jsonObject.put(eruptFieldModel.getFieldName(), DateUtil.getSimpleFormatDate(cell.getDateCellValue()));
                             }
                             break;
                     }
@@ -234,7 +266,7 @@ public class EruptExcelService {
 
 
     //模板的格式和edit输入框一致
-    public void createExcelTemplate(EruptModel eruptModel, HttpServletRequest request, HttpServletResponse response) {
+    public void createExcelTemplate(EruptModel<T> eruptModel, HttpServletRequest request, HttpServletResponse response) {
         Workbook wb = new HSSFWorkbook();
         //基本信息
         Sheet sheet = wb.createSheet(eruptModel.getErupt().name());

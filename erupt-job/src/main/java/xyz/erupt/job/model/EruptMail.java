@@ -16,7 +16,7 @@ import xyz.erupt.annotation.fun.DataProxy;
 import xyz.erupt.annotation.sub_erupt.Power;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.InputType;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
 import xyz.erupt.core.util.Erupts;
@@ -52,20 +52,20 @@ import java.util.Objects;
 public class EruptMail extends HyperModel implements DataProxy<EruptMail> {
 
     @EruptField(
-            views = @View(title = "接收人"),
+            columns = @STColumn(title = "接收人"),
             edit = @Edit(title = "接收人", notNull = true, search = @Search,
                     inputType = @InputType(fullSpan = true, regex = RegexConst.EMAIL_REGEX))
     )
     private String recipient;
 
     @EruptField(
-            views = @View(title = "抄送人", template = JobConst.BEAUTIFUL_TAG),
+            columns = @STColumn(title = "抄送人", template = JobConst.BEAUTIFUL_TAG),
             edit = @Edit(title = "抄送人", type = EditType.TAGS)
     )
     private String cc;
 
     @EruptField(
-            views = @View(title = "主题"),
+            columns = @STColumn(title = "主题"),
             edit = @Edit(title = "主题", notNull = true, search = @Search, inputType = @InputType(fullSpan = true))
     )
     private String subject;
@@ -73,13 +73,13 @@ public class EruptMail extends HyperModel implements DataProxy<EruptMail> {
     @Lob
     @Type(type = "org.hibernate.type.TextType")
     @EruptField(
-            views = @View(title = "内容"),
+            columns = @STColumn(title = "内容"),
             edit = @Edit(title = "内容", notNull = true, type = EditType.HTML_EDITOR)
     )
     private String content;
 
     @EruptField(
-            views = @View(title = "发送时间")
+            columns = @STColumn(title = "发送时间")
     )
     private Date createTime;
 

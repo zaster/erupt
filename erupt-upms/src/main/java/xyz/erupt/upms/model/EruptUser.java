@@ -1,9 +1,25 @@
 package xyz.erupt.upms.model;
 
-import lombok.Getter;
-import lombok.Setter;
+import java.util.Date;
+import java.util.Set;
+
+import javax.annotation.Resource;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import javax.persistence.UniqueConstraint;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+
+import lombok.Getter;
+import lombok.Setter;
 import xyz.erupt.annotation.Erupt;
 import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.EruptI18n;
@@ -12,7 +28,7 @@ import xyz.erupt.annotation.fun.DataProxy;
 import xyz.erupt.annotation.sub_erupt.LinkTree;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.annotation.sub_field.sub_edit.InputType;
 import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTreeType;
@@ -26,11 +42,6 @@ import xyz.erupt.jpa.dao.EruptDao;
 import xyz.erupt.upms.constant.RegexConst;
 import xyz.erupt.upms.model.base.HyperModel;
 import xyz.erupt.upms.service.EruptUserService;
-
-import javax.annotation.Resource;
-import javax.persistence.*;
-import java.util.Date;
-import java.util.Set;
 
 /**
  * @author YuePeng
@@ -52,19 +63,19 @@ import java.util.Set;
 public class EruptUser extends HyperModel implements DataProxy<EruptUser> {
 
     @EruptField(
-            views = @View(title = "用户名", sortable = true),
+            columns = @STColumn(title = "用户名", sort = true),
             edit = @Edit(title = "用户名", desc = "登录用户名", notNull = true, search = @Search(vague = true))
     )
     private String account;
 
     @EruptField(
-            views = @View(title = "姓名", sortable = true),
+            columns = @STColumn(title = "姓名", sort = true),
             edit = @Edit(title = "姓名", notNull = true, search = @Search(vague = true))
     )
     private String name;
 
     @EruptField(
-            views = @View(title = "账户状态"),
+            columns = @STColumn(title = "账户状态"),
             edit = @Edit(
                     title = "账户状态",
                     search = @Search,
@@ -79,20 +90,20 @@ public class EruptUser extends HyperModel implements DataProxy<EruptUser> {
     private Boolean status = true;
 
     @EruptField(
-            views = @View(title = "手机号码"),
+            columns = @STColumn(title = "手机号码"),
             edit = @Edit(title = "手机号码", search = @Search(vague = true), inputType = @InputType(regex = RegexConst.PHONE_REGEX))
     )
     private String phone;
 
     @EruptField(
-            views = @View(title = "邮箱"),
+            columns = @STColumn(title = "邮箱"),
             edit = @Edit(title = "邮箱", search = @Search(vague = true), inputType = @InputType(regex = RegexConst.EMAIL_REGEX))
     )
     private String email;
 
     @ManyToOne
     @EruptField(
-            views = @View(title = "首页菜单", column = "name"),
+            columns = @STColumn(title = "首页菜单", index = "name"),
             edit = @Edit(
                     title = "首页菜单",
                     type = EditType.REFERENCE_TREE,
@@ -103,14 +114,14 @@ public class EruptUser extends HyperModel implements DataProxy<EruptUser> {
 
     @ManyToOne
     @EruptField(
-            views = @View(title = "所属组织", column = "name"),
+            columns = @STColumn(title = "所属组织", index = "name"),
             edit = @Edit(title = "所属组织", type = EditType.REFERENCE_TREE, referenceTreeType = @ReferenceTreeType(pid = "parentOrg.id"))
     )
     private EruptOrg eruptOrg;
 
     @ManyToOne
     @EruptField(
-            views = @View(title = "岗位", column = "name"),
+            columns = @STColumn(title = "岗位", index = "name"),
             edit = @Edit(title = "岗位", type = EditType.REFERENCE_TREE)
     )
     private EruptPost eruptPost;
@@ -136,7 +147,7 @@ public class EruptUser extends HyperModel implements DataProxy<EruptUser> {
     private String passwordB;
 
     @EruptField(
-            views = @View(title = "md5加密"),
+            columns = @STColumn(title = "md5加密"),
             edit = @Edit(
                     title = "md5加密",
                     type = EditType.BOOLEAN,
@@ -156,7 +167,7 @@ public class EruptUser extends HyperModel implements DataProxy<EruptUser> {
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id")
     )
     @EruptField(
-            views = @View(title = "所属角色"),
+            columns = @STColumn(title = "所属角色"),
             edit = @Edit(
                     title = "所属角色",
                     type = EditType.CHECKBOX

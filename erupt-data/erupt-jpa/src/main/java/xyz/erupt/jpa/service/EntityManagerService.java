@@ -1,7 +1,21 @@
 package xyz.erupt.jpa.service;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceContext;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
@@ -9,18 +23,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.core.annotation.EruptDataSource;
 import xyz.erupt.core.prop.EruptProp;
 import xyz.erupt.core.prop.EruptPropDb;
-
-import javax.annotation.Resource;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.PersistenceContext;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * @author YuePeng
@@ -76,7 +83,7 @@ public class EntityManagerService implements ApplicationRunner {
     }
 
 
-    public <R> R getEntityManager(Class<?> eruptClass, Function<EntityManager, R> function) {
+    public <R,T> R getEntityManager(Class<T> eruptClass, Function<EntityManager, R> function) {
         EruptDataSource eruptDataSource = eruptClass.getAnnotation(EruptDataSource.class);
         if (null == eruptDataSource) return function.apply(entityManager);
         EntityManager em = entityManagerMap.get(eruptDataSource.value()).createEntityManager();
@@ -88,7 +95,7 @@ public class EntityManagerService implements ApplicationRunner {
     }
 
 
-    public void entityManagerTran(Class<?> eruptClass, Consumer<EntityManager> consumer) {
+    public <T> void entityManagerTran(Class<T> eruptClass, Consumer<EntityManager> consumer) {
         EruptDataSource eruptDataSource = eruptClass.getAnnotation(EruptDataSource.class);
         if (null == eruptDataSource) {
             consumer.accept(entityManager);

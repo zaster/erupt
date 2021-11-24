@@ -1,12 +1,12 @@
 package xyz.erupt.upms.enums;
 
-import lombok.Getter;
-import xyz.erupt.annotation.fun.ChoiceFetchHandler;
-import xyz.erupt.annotation.fun.VLModel;
-
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import lombok.Getter;
+import xyz.erupt.annotation.fun.ChoiceFetchHandler;
+import xyz.erupt.annotation.fun.VLModel;
 
 @Getter
 public enum MenuTypeEnum {
@@ -28,7 +28,7 @@ public enum MenuTypeEnum {
 
     static {
         menuTypes = Stream.of(MenuTypeEnum.values()).map(menuTypeEnum ->
-                new VLModel(menuTypeEnum.getCode(), menuTypeEnum.getName(), menuTypeEnum.getDesc())).collect(Collectors.toList());
+                new VLModel(menuTypeEnum.getCode(), menuTypeEnum.getName(),"", menuTypeEnum.getDesc(),false)).collect(Collectors.toList());
     }
 
     MenuTypeEnum(String code, String name, String desc) {

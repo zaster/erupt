@@ -1,5 +1,13 @@
 package xyz.erupt.upms.model;
 
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+
 import lombok.Getter;
 import lombok.Setter;
 import xyz.erupt.annotation.Erupt;
@@ -9,16 +17,17 @@ import xyz.erupt.annotation.constant.AnnotationConst;
 import xyz.erupt.annotation.sub_erupt.Tree;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
-import xyz.erupt.annotation.sub_field.sub_edit.*;
+import xyz.erupt.annotation.sub_field.STColumn;
+import xyz.erupt.annotation.sub_field.sub_edit.ChoiceType;
+import xyz.erupt.annotation.sub_field.sub_edit.CodeEditorType;
+import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTreeType;
+import xyz.erupt.annotation.sub_field.sub_edit.ShowBy;
+import xyz.erupt.annotation.sub_field.sub_edit.TagsType;
 import xyz.erupt.upms.enums.MenuLimitEnum;
 import xyz.erupt.upms.enums.MenuStatus;
 import xyz.erupt.upms.enums.MenuTypeEnum;
 import xyz.erupt.upms.model.base.HyperModel;
 import xyz.erupt.upms.service.EruptMenuService;
-
-import javax.persistence.*;
-import java.util.Date;
 
 /**
  * @author YuePeng
@@ -38,13 +47,13 @@ import java.util.Date;
 public class EruptMenu extends HyperModel {
 
     @EruptField(
-            views = @View(title = "编码"),
+            columns = @STColumn(title = "编码"),
             edit = @Edit(title = "编码", notNull = true)
     )
     private String code;
 
     @EruptField(
-            views = @View(title = "名称"),
+            columns = @STColumn(title = "名称"),
             edit = @Edit(
                     title = "名称",
                     notNull = true

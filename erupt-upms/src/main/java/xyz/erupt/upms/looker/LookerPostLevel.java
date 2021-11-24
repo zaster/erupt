@@ -1,9 +1,20 @@
 package xyz.erupt.upms.looker;
 
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.persistence.FetchType;
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import org.springframework.stereotype.Service;
+
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Service;
 import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.PreDataProxy;
 import xyz.erupt.annotation.config.SkipSerialize;
@@ -12,7 +23,7 @@ import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
 import xyz.erupt.annotation.sub_field.Readonly;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.DateType;
 import xyz.erupt.core.exception.EruptWebApiRuntimeException;
 import xyz.erupt.core.service.I18NTranslateService;
@@ -21,14 +32,6 @@ import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.service.EruptContextService;
 import xyz.erupt.upms.service.EruptUserService;
-
-import javax.annotation.Resource;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
-import java.util.Date;
-import java.util.List;
 
 /**
  * @author YuePeng
@@ -43,17 +46,17 @@ public class LookerPostLevel extends BaseModel implements DataProxy<LookerPostLe
 
     @ManyToOne
     @EruptField(
-            views = {
-                    @View(title = "创建人", column = "name"),
-                    @View(title = "所属组织", column = "eruptOrg.name"),
-                    @View(title = "岗位", column = "eruptPost.name"),
+            columns = {
+                    @STColumn(title = "创建人", index = "name"),
+                    @STColumn(title = "所属组织", index = "eruptOrg.name"),
+                    @STColumn(title = "岗位", index = "eruptPost.name"),
             },
             edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE)
     )
     private EruptUserVo createUser;
 
     @EruptField(
-            views = @View(title = "创建时间", sortable = true),
+            columns = @STColumn(title = "创建时间", sort = true),
             edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME))
     )
     private Date createTime;

@@ -1,12 +1,12 @@
 package xyz.erupt.upms.enums;
 
-import lombok.Getter;
-import xyz.erupt.annotation.fun.ChoiceFetchHandler;
-import xyz.erupt.annotation.fun.VLModel;
-
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import lombok.Getter;
+import xyz.erupt.annotation.fun.ChoiceFetchHandler;
+import xyz.erupt.annotation.fun.VLModel;
 
 /**
  * @author YuePeng
@@ -29,7 +29,7 @@ public enum MenuStatus {
         @Override
         public List<VLModel> fetch(String[] params) {
             return Stream.of(MenuStatus.values()).map(menuTypeEnum ->
-                    new VLModel(menuTypeEnum.getValue() + "", menuTypeEnum.getLabel())).collect(Collectors.toList());
+                    new VLModel(menuTypeEnum.getValue() + "", menuTypeEnum.getLabel(),"","",false)).collect(Collectors.toList());
         }
 
     }

@@ -1,6 +1,12 @@
 package xyz.erupt.upms.handler;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
 import org.springframework.stereotype.Component;
+
 import xyz.erupt.annotation.fun.ChoiceFetchHandler;
 import xyz.erupt.annotation.fun.VLModel;
 import xyz.erupt.core.util.EruptAssert;
@@ -8,10 +14,6 @@ import xyz.erupt.jpa.dao.EruptDao;
 import xyz.erupt.upms.cache.CaffeineEruptCache;
 import xyz.erupt.upms.constant.FetchConst;
 import xyz.erupt.upms.model.EruptDictItem;
-
-import javax.annotation.Resource;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author YuePeng
@@ -31,7 +33,7 @@ public class DictChoiceFetchHandler implements ChoiceFetchHandler {
         dictCache.init(params.length == 2 ? Long.parseLong(params[1]) : FetchConst.DEFAULT_CACHE_TIME);
         return dictCache.get(DictChoiceFetchHandler.class.getName() + ":" + params[0], (key) ->
                 eruptDao.queryEntityList(EruptDictItem.class, "eruptDict.code = '" + params[0] + "'")
-                        .stream().map((item) -> new VLModel(item.getId(), item.getName())).collect(Collectors.toList()));
+                        .stream().map((item) -> new VLModel(item.getId(), item.getName(),"","",false)).collect(Collectors.toList()));
     }
 
 }

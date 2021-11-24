@@ -1,22 +1,29 @@
 package xyz.erupt.job.model;
 
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import org.hibernate.annotations.Type;
+
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
 import xyz.erupt.annotation.Erupt;
 import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.EruptI18n;
 import xyz.erupt.annotation.sub_erupt.Power;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
-import xyz.erupt.annotation.sub_field.ViewType;
+import xyz.erupt.annotation.sub_field.STColumn;
+import xyz.erupt.annotation.sub_field.STColumnType;
 import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
 import xyz.erupt.jpa.model.BaseModel;
-
-import javax.persistence.*;
-import java.util.Date;
 
 /**
  * @author YuePeng
@@ -37,35 +44,35 @@ public class EruptJobLog extends BaseModel {
     @ManyToOne
     @JoinColumn(name = "job_id")
     @EruptField(
-            views = @View(title = "任务名称", column = "name"),
+            columns = @STColumn(title = "任务名称", index = "name"),
             edit = @Edit(title = "任务名称", show = false, search = @Search, type = EditType.REFERENCE_TREE)
     )
     private EruptJob eruptJob;
 
     @EruptField(
-            views = @View(title = "任务参数")
+            columns = @STColumn(title = "任务参数")
     )
     private String handlerParam;
 
     @EruptField(
-            views = @View(title = "任务状态"),
+            columns = @STColumn(title = "任务状态"),
             edit = @Edit(title = "任务状态", boolType = @BoolType(trueText = "成功", falseText = "失败"), search = @Search)
     )
     private Boolean status;
 
     @EruptField(
-            views = @View(title = "开始时间")
+            columns = @STColumn(title = "开始时间")
     )
     private Date startTime;
 
     @EruptField(
-            views = @View(title = "结束时间")
+            columns = @STColumn(title = "结束时间")
     )
     private Date endTime;
 
     @Column(length = 2000)
     @EruptField(
-            views = @View(title = "执行结果"),
+            columns = @STColumn(title = "执行结果"),
             edit = @Edit(title = "执行结果")
     )
     private String resultInfo;
@@ -73,7 +80,7 @@ public class EruptJobLog extends BaseModel {
     @Lob
     @Type(type = "org.hibernate.type.TextType")
     @EruptField(
-            views = @View(title = "错误信息", type = ViewType.HTML),
+            columns = @STColumn(title = "错误信息", type = STColumnType.LINK),
             edit = @Edit(title = "错误信息")
     )
     private String errorInfo;

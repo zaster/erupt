@@ -1,24 +1,28 @@
 package xyz.erupt.jpa.dao;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.Transient;
+
 import org.apache.commons.lang3.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
-import xyz.erupt.annotation.sub_field.View;
+import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.core.query.EruptQuery;
 import xyz.erupt.core.util.AnnotationUtil;
 import xyz.erupt.core.util.ReflectUtil;
 import xyz.erupt.core.view.EruptFieldModel;
 import xyz.erupt.core.view.EruptModel;
-
-import javax.persistence.*;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * @author YuePeng date 2018-11-05.
@@ -38,7 +42,7 @@ public class EruptJpaUtils {
 
     public static final String LEFT_JOIN = " left outer join ";
 
-    public static Set<String> getEruptColJpaKeys(EruptModel eruptModel) {
+    public static <TT>Set<String> getEruptColJpaKeys(EruptModel<TT> eruptModel) {
         Set<String> cols = new HashSet<>();
         String eruptNameSymbol = eruptModel.getEruptName() + ".";
         cols.add(eruptNameSymbol + eruptModel.getErupt().primaryKeyCol() + AS + eruptModel.getErupt().primaryKeyCol());
@@ -50,12 +54,11 @@ public class EruptJpaUtils {
             if (null != field.getField().getAnnotation(Transient.class)) {
                 return;
             }
-            for (View view : field.getEruptField().views()) {
-                if (view.column().length() == 0) {
-                    cols.add(eruptNameSymbol + field.getFieldName() + AS + field.getFieldName());
+            for (STColumn column : field.getEruptField().columns()) {
+                if (column.index().length() == 0) {
+                    cols.add(eruptNameSymbol + field.getFieldName()) ;
                 } else {
-                    cols.add(eruptNameSymbol + field.getFieldName() + "." + view.column() + AS + field.getFieldName()
-                            + "_" + view.column().replace(".", "_"));
+                    cols.add(eruptNameSymbol + field.getFieldName() + "." + column.index()) ;
                 }
             }
         });
@@ -80,7 +83,7 @@ public class EruptJpaUtils {
         return hql.toString();
     }
 
-    public static String generateEruptJoinHql(EruptModel eruptModel) {
+    public static <TT> String generateEruptJoinHql(EruptModel<TT> eruptModel) {
         StringBuilder sb = new StringBuilder();
         ReflectUtil.findClassAllFields(eruptModel.getClazz(), field -> {
             if (null != field.getAnnotation(ManyToOne.class) || null != field.getAnnotation(OneToOne.class)) {
@@ -89,13 +92,13 @@ public class EruptJpaUtils {
 
             }
             EruptFieldModel model = eruptModel.getEruptFieldMap().get(field.getName());
-            if (model != null && model.getEruptField().views() != null) {
-                View[] views = model.getEruptField().views();
+            if (model != null && model.getEruptField().columns() != null) {
+                STColumn[] columns = model.getEruptField().columns();
                 Set<String> pathSet = new HashSet<String>();
-                for (View v : views) {
-                    if (v.column().length() != 0 && v.column().contains(".")) {
+                for (STColumn column : columns) {
+                    if (column.index().length() != 0 && column.index().contains(".")) {
                         String path = eruptModel.getEruptName() + "." + field.getName() + "."
-                                + v.column().substring(0, v.column().lastIndexOf("."));
+                                + column.index().substring(0, column.index().lastIndexOf("."));
                         if (!pathSet.contains(path)) {
                             sb.append(LEFT_JOIN).append(path).append(AS)
                                     .append(path.substring(path.lastIndexOf(".") + 1));
@@ -110,7 +113,7 @@ public class EruptJpaUtils {
         return sb.toString();
     }
 
-    public static String geneEruptHqlCondition(EruptModel eruptModel, List<Condition> conditions,
+    public static <TT> String geneEruptHqlCondition(EruptModel<TT> eruptModel, List<Condition> conditions,
             List<String> customCondition) {
         StringBuilder hql = new StringBuilder();
         hql.append(" where 1 = 1 ");

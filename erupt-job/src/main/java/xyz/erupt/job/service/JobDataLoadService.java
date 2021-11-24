@@ -1,11 +1,18 @@
 package xyz.erupt.job.service;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.transaction.Transactional;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.fun.VLModel;
 import xyz.erupt.core.annotation.EruptHandlerNaming;
 import xyz.erupt.core.service.EruptApplication;
@@ -21,11 +28,6 @@ import xyz.erupt.jpa.dao.EruptDao;
 import xyz.erupt.upms.enums.MenuStatus;
 import xyz.erupt.upms.enums.MenuTypeEnum;
 import xyz.erupt.upms.model.EruptMenu;
-
-import javax.annotation.Resource;
-import javax.transaction.Transactional;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author YuePeng
@@ -57,7 +59,7 @@ public class JobDataLoadService implements CommandLineRunner {
         TimeRecorder timeRecorder = new TimeRecorder();
         EruptSpringUtil.scannerPackage(EruptApplication.getScanPackage(), new TypeFilter[]{new AssignableTypeFilter(EruptJobHandler.class)}, clazz -> {
             EruptHandlerNaming eruptHandlerNaming = clazz.getAnnotation(EruptHandlerNaming.class);
-            loadedJobHandler.add(new VLModel(clazz.getName(), (null == eruptHandlerNaming) ? clazz.getSimpleName() : eruptHandlerNaming.value()));
+            loadedJobHandler.add(new VLModel(clazz.getName(), (null == eruptHandlerNaming) ? clazz.getSimpleName() : eruptHandlerNaming.value(),"","",false));
         });
         if (eruptJobProp.isEnable()) {
             for (EruptJob job : eruptDao.queryEntityList(EruptJob.class, "status = true", null)) {

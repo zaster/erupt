@@ -5,8 +5,9 @@ import java.util.stream.Stream;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.google.gson.JsonObject;
+import com.alibaba.fastjson.JSONObject;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,23 +64,22 @@ public class EruptDrillController {
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
     public EruptApiModel drillAdd(@PathVariable("erupt") String erupt, @PathVariable("code") String code,
-            @PathVariable("id") String id, @RequestBody JsonObject data, HttpServletRequest request) throws Exception {
-        EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+            @PathVariable("id") String id, @RequestBody JSONObject data, HttpServletRequest request) throws Exception {
+        EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
         Link link = findDrillLink(eruptModel.getErupt(), code);
         eruptService.verifyIdPermissions(eruptModel, id);
-        JsonObject jo = new JsonObject();
+        JSONObject jo = new JSONObject();
         String joinColumn = link.joinColumn();
         Field field = ReflectUtil.findClassField(eruptModel.getClazz(), link.column());
-        field.setAccessible(true);
-        Object val = field.get(DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
-                .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id)));
+        Object val= PropertyUtils.getProperty(DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
+        .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id)), field.getName());
         if (joinColumn.contains(".")) {
             String[] jc = joinColumn.split("\\.");
-            JsonObject jo2 = new JsonObject();
-            jo2.addProperty(jc[1], val.toString());
-            jo.add(jc[0], jo2);
+            JSONObject jo2 = new JSONObject();
+            jo2.put(jc[1], val.toString());
+            jo.put(jc[0], jo2);
         } else {
-            jo.addProperty(joinColumn, val.toString());
+            jo.put(joinColumn, val.toString());
         }
         return eruptModifyController.addEruptData(link.linkErupt().getSimpleName(), data, jo, request);
     }

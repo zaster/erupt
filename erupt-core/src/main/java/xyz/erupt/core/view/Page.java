@@ -1,11 +1,10 @@
 package xyz.erupt.core.view;
 
+import java.util.Collection;
+
 import lombok.Getter;
 import lombok.Setter;
 import xyz.erupt.annotation.config.Comment;
-
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * @author YuePeng
@@ -13,7 +12,7 @@ import java.util.Map;
  */
 @Getter
 @Setter
-public class Page {
+public class Page<M> {
     private int pageIndex;
 
     private int pageSize;
@@ -27,7 +26,7 @@ public class Page {
     public static final int PAGE_MAX_DATA = 1000000;
 
     @Comment("Map → value 为复杂对象需做处理，如：{region:{id:1,name:'xxxx'}},则需转换成：region_name 前端才可正常渲染")
-    private Collection<Map<String, Object>> list;
+    private Collection<M> list;
 
     public Page(int pageIndex, int pageSize, String sort) {
         this.pageIndex = pageIndex == 0 ? 1 : pageIndex;
