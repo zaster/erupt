@@ -10,12 +10,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.formula.functions.T;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,7 +74,7 @@ public class EruptExcelController {
         if (eruptProp.isCsrfInspect() && SecurityUtil.csrfInspect(request, response)) {
             return;
         }
-        EruptModel<T> eruptModel = EruptCoreService.getErupt(eruptName);
+        EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         Erupts.powerLegal(eruptModel, PowerObject::isImportable);
         dataFileService.createExcelTemplate(eruptModel, request, response);
     }
@@ -91,17 +90,18 @@ public class EruptExcelController {
         if (eruptProp.isCsrfInspect() && SecurityUtil.csrfInspect(request, response)) {
             return;
         }
-        EruptModel<T> eruptModel = EruptCoreService.getErupt(eruptName);
+        EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         Erupts.powerLegal(eruptModel, PowerObject::isExport);
         TableQueryVo tableQueryVo = new TableQueryVo();
         tableQueryVo.setPageIndex(1);
         tableQueryVo.setDataExport(true);
         if (null != condition) {
-            List<Condition> conditions = JSON.parseObject(URLDecoder
-            .decode(condition, StandardCharsets.UTF_8.name()),new TypeReference<List<Condition>>(){});
+            List<Condition> conditions = new Gson().fromJson(URLDecoder
+                    .decode(condition, StandardCharsets.UTF_8.name()), new TypeToken<List<Condition>>() {
+            }.getType());            
             tableQueryVo.setCondition(conditions);
         }
-        Page<?> page = eruptService.getEruptData(eruptModel, tableQueryVo, null);
+        Page<Object> page = eruptService.getEruptData(eruptModel, tableQueryVo, null);
         Workbook wb = dataFileService.exportExcel(eruptModel, page);
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.excelExport(wb)));
         wb.write(HttpUtil.downLoadFile(request, response, eruptModel.getErupt().name() + EruptExcelService.XLS_FORMAT));
@@ -113,13 +113,13 @@ public class EruptExcelController {
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional(rollbackOn = Exception.class)
     public EruptApiModel importExcel(@PathVariable("erupt") String eruptName, @RequestParam("file") MultipartFile file, HttpServletRequest request) {
-        EruptModel<T> eruptModel = EruptCoreService.getErupt(eruptName);
+        EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         Erupts.powerLegal(eruptModel, PowerObject::isImportable, "No import permission");
         if (file.isEmpty()) {
             return EruptApiModel.errorApi("上传失败，请选择文件");
         }
         String fileName = file.getOriginalFilename();
-        List<JSONObject> list;
+        List<JsonObject> list;
         int i = 1;
         try {
             i++;

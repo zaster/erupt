@@ -1,6 +1,10 @@
 package xyz.erupt.mongodb.impl;
 
-import lombok.SneakyThrows;
+import java.util.Collection;
+import java.util.List;
+
+import javax.annotation.Resource;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -9,6 +13,8 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+
+import lombok.SneakyThrows;
 import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.core.invoke.DataProcessorManager;
 import xyz.erupt.core.query.Column;
@@ -16,10 +22,6 @@ import xyz.erupt.core.query.EruptQuery;
 import xyz.erupt.core.service.IEruptDataService;
 import xyz.erupt.core.view.EruptModel;
 import xyz.erupt.core.view.Page;
-
-import javax.annotation.Resource;
-import java.lang.reflect.Field;
-import java.util.*;
 
 /**
  * @author YuePeng
@@ -34,14 +36,14 @@ public class EruptMongodbImpl implements IEruptDataService, ApplicationRunner {
     private MongoTemplate mongoTemplate;
 
     @Override
-    public Object findDataById(EruptModel eruptModel, Object id) {
+    public <TT>TT findDataById(EruptModel eruptModel, Object id) {
         Query query = new Query(Criteria.where(eruptModel.getErupt().primaryKeyCol()).is(id));
-        return mongoTemplate.findOne(query, eruptModel.getClazz());
+        return (TT)mongoTemplate.findOne(query, eruptModel.getClazz());
     }
 
     @SneakyThrows
     @Override
-    public Page queryList(EruptModel eruptModel, Page page, EruptQuery eruptQuery) {
+    public <TT>Page<TT> queryList(EruptModel eruptModel, Page<TT> page, EruptQuery eruptQuery) {
         Query query = new Query();
         this.addQueryCondition(eruptQuery, query);
         page.setTotal(mongoTemplate.count(query, eruptModel.getClazz()));
@@ -57,11 +59,10 @@ public class EruptMongodbImpl implements IEruptDataService, ApplicationRunner {
                     }
                 }
             }
-            List<Map<String, Object>> newList = new ArrayList<>();
-            for (Object obj : mongoTemplate.find(query, eruptModel.getClazz())) {
+/*             for (Object obj : mongoTemplate.find(query, eruptModel.getClazz())) {
                 newList.add(mongoObjectToMap(obj));
-            }
-            page.setList(newList);
+            } */
+            page.setList((Collection<TT>)mongoTemplate.find(query, eruptModel.getClazz()));
         }
         return page;
     }
@@ -87,7 +88,7 @@ public class EruptMongodbImpl implements IEruptDataService, ApplicationRunner {
     }
 
     @SneakyThrows
-    private Map<String, Object> mongoObjectToMap(Object obj) {
+   /*  private Map<String, Object> mongoObjectToMap(Object obj) {
         Map<String, Object> map = new HashMap<>();
         Class<?> clazz = obj.getClass();
         for (Field field : clazz.getDeclaredFields()) {
@@ -95,33 +96,33 @@ public class EruptMongodbImpl implements IEruptDataService, ApplicationRunner {
             map.put(field.getName(), field.get(obj));
         }
         return map;
-    }
+    } */
 
     @Override
-    public void addData(EruptModel eruptModel, Object object) {
+    public <TT>void addData(EruptModel eruptModel, Object object) {
         mongoTemplate.insert(object);
     }
 
     @Override
-    public void editData(EruptModel eruptModel, Object object) {
+    public <TT>void editData(EruptModel eruptModel, Object object) {
         mongoTemplate.save(object);
     }
 
     @Override
-    public void deleteData(EruptModel eruptModel, Object object) {
+    public <TT>void deleteData(EruptModel eruptModel, Object object) {
         mongoTemplate.remove(object);
     }
 
     @Override
-    public Collection<Map<String, Object>> queryColumn(EruptModel eruptModel, List<Column> columns, EruptQuery eruptQuery) {
+    public <TT>Collection<TT> queryColumn(EruptModel eruptModel, List<Column> columns, EruptQuery eruptQuery) {
         Query query = new Query();
         this.addQueryCondition(eruptQuery, query);
         columns.stream().map(Column::getName).forEach(query.fields()::include);
-        List<Map<String, Object>> list = new ArrayList<>();
+/*         List<TT> list = new ArrayList<>();
         for (Object obj : mongoTemplate.find(query, eruptModel.getClazz())) {
             list.add(mongoObjectToMap(obj));
-        }
-        return list;
+        } */
+        return (Collection<TT>)mongoTemplate.find(query, eruptModel.getClazz());
     }
 
     @Override

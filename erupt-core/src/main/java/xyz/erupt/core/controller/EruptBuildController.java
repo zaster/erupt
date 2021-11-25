@@ -31,7 +31,7 @@ public class EruptBuildController {
     @GetMapping("/{erupt}")
     @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     public EruptBuildModel getEruptBuild(@PathVariable("erupt") String eruptName) {
-        EruptModel<Object> eruptView = EruptCoreService.getEruptView(eruptName);
+        EruptModel eruptView = EruptCoreService.getEruptView(eruptName);
         EruptBuildModel eruptBuildModel = new EruptBuildModel();
         eruptBuildModel.setPower(PowerInvoke.getPowerObject(eruptView));
         eruptBuildModel.setEruptModel(eruptView);

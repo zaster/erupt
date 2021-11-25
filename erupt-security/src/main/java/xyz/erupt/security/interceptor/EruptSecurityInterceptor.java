@@ -13,7 +13,6 @@ import javax.transaction.Transactional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.poi.ss.formula.functions.T;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.method.HandlerMethod;
@@ -111,10 +110,10 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
                 }
                 break;
             case ERUPT:
-                EruptModel<T> eruptModel = EruptCoreService.getErupt(eruptName);
+                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
                 $ep:
                 if (StringUtils.isNotBlank(parentEruptName)) {
-                    EruptModel<T> eruptParentModel = EruptCoreService.getErupt(parentEruptName);
+                    EruptModel eruptParentModel = EruptCoreService.getErupt(parentEruptName);
                     for (EruptFieldModel model : eruptParentModel.getEruptFieldModels()) {
                         if (eruptModel.getEruptName().equals(model.getFieldReturnName())) {
                             if (authStr.equals(eruptModel.getEruptName())) {

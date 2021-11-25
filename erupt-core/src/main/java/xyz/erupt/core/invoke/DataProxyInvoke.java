@@ -16,7 +16,7 @@ import xyz.erupt.core.view.EruptModel;
  */
 public class DataProxyInvoke {
 
-    public static <T> void invoke(EruptModel<T> eruptModel, Consumer<DataProxy<T>> consumer) {
+    public static <T> void invoke(EruptModel eruptModel, Consumer<DataProxy<T>> consumer) {
         //父类及接口 @PreDataProxy
         ReflectUtil.findClassExtendStack(eruptModel.getClazz()).forEach(clazz -> DataProxyInvoke.actionInvokePreDataProxy(clazz, consumer));
         //本类及接口 @PreDataProxy

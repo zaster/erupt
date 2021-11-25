@@ -42,7 +42,7 @@ public class EruptJpaUtils {
 
     public static final String LEFT_JOIN = " left outer join ";
 
-    public static <TT>Set<String> getEruptColJpaKeys(EruptModel<TT> eruptModel) {
+    public static <TT>Set<String> getEruptColJpaKeys(EruptModel eruptModel) {
         Set<String> cols = new HashSet<>();
         String eruptNameSymbol = eruptModel.getEruptName() + ".";
         cols.add(eruptNameSymbol + eruptModel.getErupt().primaryKeyCol() + AS + eruptModel.getErupt().primaryKeyCol());
@@ -83,7 +83,7 @@ public class EruptJpaUtils {
         return hql.toString();
     }
 
-    public static <TT> String generateEruptJoinHql(EruptModel<TT> eruptModel) {
+    public static <TT> String generateEruptJoinHql(EruptModel eruptModel) {
         StringBuilder sb = new StringBuilder();
         ReflectUtil.findClassAllFields(eruptModel.getClazz(), field -> {
             if (null != field.getAnnotation(ManyToOne.class) || null != field.getAnnotation(OneToOne.class)) {
@@ -113,7 +113,7 @@ public class EruptJpaUtils {
         return sb.toString();
     }
 
-    public static <TT> String geneEruptHqlCondition(EruptModel<TT> eruptModel, List<Condition> conditions,
+    public static <TT> String geneEruptHqlCondition(EruptModel eruptModel, List<Condition> conditions,
             List<String> customCondition) {
         StringBuilder hql = new StringBuilder();
         hql.append(" where 1 = 1 ");

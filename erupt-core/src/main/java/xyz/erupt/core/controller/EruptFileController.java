@@ -18,7 +18,7 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -70,7 +70,7 @@ public class EruptFileController {
             return EruptApiModel.errorApi("上传失败，请选择文件");
         }
         //生成存储路径
-        EruptModel<Object> eruptModel = EruptCoreService.getErupt(eruptName);
+        EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         Erupts.powerLegal(eruptModel, powerObject -> powerObject.isEdit() || powerObject.isAdd());
         Edit edit = eruptModel.getEruptFieldMap().get(fieldName).getEruptField().edit();
         String path;
@@ -214,9 +214,12 @@ public class EruptFileController {
             Map<String, Object> map = uploadHtmlEditorImage(eruptName, fieldName, file);
             Boolean status = (Boolean) map.get("uploaded");
             map.put("state", status ? "SUCCESS" : "ERROR");
-            response.getOutputStream().write(JSON.toJSONString(map).getBytes(StandardCharsets.UTF_8));
+            
+            response.getOutputStream().write(new Gson().toJson(map).getBytes(StandardCharsets.UTF_8));
         }
+
     }
+
 
     private static final String DOWNLOAD_PATH = "/download-attachment";
 

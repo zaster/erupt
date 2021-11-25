@@ -5,8 +5,8 @@ import java.lang.reflect.Field;
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +26,7 @@ import xyz.erupt.annotation.fun.PowerObject;
 import xyz.erupt.annotation.sub_erupt.LinkTree;
 import xyz.erupt.core.annotation.EruptRecordOperate;
 import xyz.erupt.core.annotation.EruptRouter;
+import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.constant.EruptRestPath;
 import xyz.erupt.core.invoke.DataProcessorManager;
 import xyz.erupt.core.invoke.DataProxyInvoke;
@@ -50,8 +51,7 @@ import xyz.erupt.core.view.EruptModel;
 @RequestMapping(EruptRestPath.ERUPT_DATA_MODIFY)
 @RequiredArgsConstructor
 public class EruptModifyController {
-
-
+    private final Gson gson = GsonFactory.getGson();
     private final EruptService eruptService;
 
     @SneakyThrows
@@ -59,9 +59,9 @@ public class EruptModifyController {
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody JSONObject data,
-                                      JSONObject jsonObject, HttpServletRequest request) {
-        EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
+    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody JsonObject data,
+                JsonObject jsonObject, HttpServletRequest request) {
+        EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isAdd);
         LinkTree dependTree = eruptModel.getErupt().linkTree();
         if (StringUtils.isNotBlank(dependTree.field()) && dependTree.dependNode()) {
@@ -71,24 +71,24 @@ public class EruptModifyController {
                 if (StringUtils.isBlank(linkVal)) {
                     return EruptApiModel.errorApi("请选择树节点");
                 } else {
-                    if (null == jsonObject) jsonObject = new JSONObject();
+                    if (null == jsonObject) jsonObject = new JsonObject();
                     String rm = ReflectUtil.findClassField(eruptModel.getClazz(), dependTree.field()).getType().getSimpleName();
-                    JSONObject sub = new JSONObject();
-                    sub.put(EruptCoreService.getErupt(rm).getErupt().primaryKeyCol(), linkVal);
-                    jsonObject.put(dependTree.field(), sub);
+                    JsonObject sub = new JsonObject();
+                    sub.addProperty(EruptCoreService.getErupt(rm).getErupt().primaryKeyCol(), linkVal);
+                    jsonObject.add(dependTree.field(), sub);
                 }
             }
         }
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
-        Object o = JSON.parseObject(data.toString(), eruptModel.getClazz());
+        Object o = gson.fromJson(data, eruptModel.getClazz());
         EruptUtil.clearObjectDefaultValueByJson(o, data);
         Object obj = EruptUtil.dataTarget(eruptModel, o, eruptModel.getClazz().newInstance(), SceneEnum.ADD);
         if (null != jsonObject) {
             for (String key : jsonObject.keySet()) {
                 Field field = ReflectUtil.findClassField(eruptModel.getClazz(), key);
                 field.setAccessible(true);
-                field.set(obj, JSON.parseObject(jsonObject.get(key).toString(), field.getType()));
+                field.set(obj, gson.fromJson(jsonObject.get(key), field.getType()));
             }
         }
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.beforeAdd(obj)));
@@ -102,13 +102,13 @@ public class EruptModifyController {
     @EruptRecordOperate(value = "修改", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody JSONObject data) throws IllegalAccessException {
-        EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
+    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody JsonObject data) throws IllegalAccessException {
+        EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isEdit);
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
-        eruptService.verifyIdPermissions(eruptModel, data.getString(eruptModel.getErupt().primaryKeyCol()));
-        Object o = JSON.parseObject(data.toString(), eruptModel.getClazz());
+        eruptService.verifyIdPermissions(eruptModel, data.get(eruptModel.getErupt().primaryKeyCol()).getAsString());
+        Object o = this.gson.fromJson(data, eruptModel.getClazz());
         EruptUtil.clearObjectDefaultValueByJson(o, data);
         Object obj = EruptUtil.dataTarget(eruptModel, o, DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
                 .findDataById(eruptModel, ReflectUtil.findClassField(eruptModel.getClazz(), eruptModel.getErupt().primaryKeyCol()).get(o)), SceneEnum.EDIT);
@@ -124,7 +124,7 @@ public class EruptModifyController {
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
     public EruptApiModel deleteEruptData(@PathVariable("erupt") String erupt, @PathVariable("id") String id) {
-        EruptModel<Object> eruptModel = EruptCoreService.getErupt(erupt);
+        EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isDelete);
         eruptService.verifyIdPermissions(eruptModel, id);
         IEruptDataService dataService = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz());
@@ -137,6 +137,7 @@ public class EruptModifyController {
         return EruptApiModel.successApi();
     }
 
+    
     @Transactional
     @DeleteMapping("/{erupt}")
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -152,7 +153,7 @@ public class EruptModifyController {
         return eruptApiModel;
     }
 
-    private <TT>void modifyLog(EruptModel<TT> eruptModel, String placeholder, String content) {
+    private <TT>void modifyLog(EruptModel eruptModel, String placeholder, String content) {
         log.info("[" + eruptModel.getEruptName() + " -> " + placeholder + "]:" + content);
     }
 }

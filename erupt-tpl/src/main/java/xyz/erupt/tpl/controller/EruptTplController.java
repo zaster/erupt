@@ -1,8 +1,26 @@
 package xyz.erupt.tpl.controller;
 
 
+import static xyz.erupt.core.constant.EruptRestPath.ERUPT_API;
+
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import xyz.erupt.annotation.sub_erupt.RowOperation;
 import xyz.erupt.annotation.sub_erupt.Tpl;
 import xyz.erupt.core.annotation.EruptRouter;
@@ -18,18 +36,6 @@ import xyz.erupt.tpl.annotation.EruptTpl;
 import xyz.erupt.tpl.annotation.TplAction;
 import xyz.erupt.tpl.engine.EngineConst;
 import xyz.erupt.tpl.service.EruptTplService;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static xyz.erupt.core.constant.EruptRestPath.ERUPT_API;
 
 /**
  * Erupt 页面结构构建信息
@@ -72,6 +78,7 @@ public class EruptTplController {
         EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         Tpl tpl = eruptModel.getEruptFieldMap().get(field).getEruptField().edit().tplType();
+        
         eruptTplService.tplRender(tpl, null, response);
     }
 

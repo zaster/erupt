@@ -6,8 +6,8 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -44,16 +44,16 @@ import xyz.erupt.core.view.EruptModel;
 @Slf4j
 public class EruptCoreService implements ApplicationRunner {
 
-    private static final Map<String, EruptModel<?>> ERUPTS = new LinkedCaseInsensitiveMap<>();
+    private static final Map<String, EruptModel> ERUPTS = new LinkedCaseInsensitiveMap<>();
 
-    public static  <TT>EruptModel<TT> getErupt(String eruptName) {
-        return (EruptModel<TT>)ERUPTS.get(eruptName);
+    public static  <TT>EruptModel getErupt(String eruptName) {
+        return (EruptModel)ERUPTS.get(eruptName);
     }
 
     //需要动态构建的EruptModel视图属性
     @SneakyThrows
-    public static <TT> EruptModel<TT> getEruptView(String eruptName) {
-        EruptModel<TT> em = EruptCoreService.<TT>getErupt(eruptName).clone();
+    public static <TT> EruptModel getEruptView(String eruptName) {
+        EruptModel em = EruptCoreService.<TT>getErupt(eruptName).clone();
         for (EruptFieldModel fieldModel : em.getEruptFieldModels()) {
             Edit edit = fieldModel.getEruptField().edit();
             if (edit.type() == EditType.CHOICE) {
@@ -62,36 +62,36 @@ public class EruptCoreService implements ApplicationRunner {
                 fieldModel.setTagList(EruptUtil.getTagList(edit.tagsType()));
             }
             STColumn[] columns = fieldModel.getEruptField().columns();
-            JSONArray jsonArray = new JSONArray();
+            JsonArray jsonArray = new JsonArray();
             Arrays.stream(columns).forEach(column->{
                 
-                JSONObject jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
+                JsonObject jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
                 {
                     
                     String title = column.title();
                     String desc = column.desc();
-                    JSONObject titleObject=new JSONObject();
-                    titleObject.put("text", title);
-                    titleObject.put("optionHelp", desc);
-                    jsonObject.put("title", titleObject);
+                    JsonObject titleObject=new JsonObject();
+                    titleObject.addProperty("text", title);
+                    titleObject.addProperty("optionHelp", desc);
+                    jsonObject.add("title", titleObject);
                 }
                 switch(column.type()) {
                     case BADGE:
                         
-                        jsonObject.put("badge", new JSONObject(EruptUtil.getOptions(column.choices())));
+                        jsonObject.add("badge", EruptUtil.getOptions(column.choices()));
                         break;
                     case YN:
-                        jsonObject.put("type", "tag");
-                        jsonObject.put("tag", new JSONObject(EruptUtil.getYn(column.bools())));
+                        jsonObject.addProperty("type", "tag");
+                        jsonObject.add("tag", EruptUtil.getYn(column.bools()));
                         break;
                     case TAG:
-                        jsonObject.put("tag", new JSONObject(EruptUtil.getOptions(column.choices())));
+                        jsonObject.add("tag", EruptUtil.getOptions(column.choices()));
                         break;
                 }
                 
                 jsonArray.add(jsonObject);
             });
-            fieldModel.getEruptFieldJson().put("columns", jsonArray);
+            fieldModel.getEruptFieldJson().add("columns", jsonArray);
         }
         if (em.getErupt().rowOperation().length > 0) {
             boolean copy = false;
@@ -99,11 +99,11 @@ public class EruptCoreService implements ApplicationRunner {
                 if (!ExprInvoke.getExpr(rowOperation.show())) {
                     if (!copy) {
                         copy = true;
-                        em.setEruptJson(em.getEruptJson().clone());
+                        em.setEruptJson(em.getEruptJson().deepCopy());
                     }
-                    JSONArray jsonArray = em.getEruptJson().getJSONArray("rowOperation");
+                    JsonArray jsonArray = em.getEruptJson().getAsJsonArray("rowOperation");
                     Optional.ofNullable(jsonArray).get().forEach(operation->{
-                        if (rowOperation.code().equals(((JSONObject)operation).getString("code"))) {
+                        if (rowOperation.code().equals(((JsonObject)operation).get("code").getAsString())) {
                             jsonArray.remove(operation);
                             return;
                         }
@@ -114,9 +114,9 @@ public class EruptCoreService implements ApplicationRunner {
         return em;
     }
 
-    private static <TT> EruptModel<TT> initEruptModel(Class<TT> clazz) {
+    private static <TT> EruptModel initEruptModel(Class<TT> clazz) {
         //erupt class data to memory
-        EruptModel<TT> eruptModel = new EruptModel<TT>(clazz);
+        EruptModel eruptModel = new EruptModel(clazz);
         // erupt field data to memory
         eruptModel.setEruptFieldModels(new ArrayList<>());
         eruptModel.setEruptFieldMap(new LinkedCaseInsensitiveMap<>());

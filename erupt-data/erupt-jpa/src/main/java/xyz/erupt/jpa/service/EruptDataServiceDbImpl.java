@@ -63,18 +63,18 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     private I18NTranslateService i18NTranslateService;
 
     @Override
-    public <TT>TT findDataById(EruptModel<TT> eruptModel, Object id) {
-        return entityManagerService.getEntityManager(eruptModel.getClazz(), (em) -> em.find(eruptModel.getClazz(), id));
+    public <TT> TT findDataById(EruptModel eruptModel, Object id) {
+        return (TT)entityManagerService.getEntityManager(eruptModel.getClazz(), (em) -> em.find(eruptModel.getClazz(), id));
     }
 
     @Override
-    public <TT>Page<TT> queryList(EruptModel<TT> eruptModel, Page<TT> page, EruptQuery query) {
+    public <TT>Page<TT> queryList(EruptModel eruptModel, Page<TT> page, EruptQuery query) {
         return eruptJpaDao.queryEruptList(eruptModel, page, query);
     }
 
     @Transactional
     @Override
-    public <TT>void addData(EruptModel<TT> eruptModel, Object data) {
+    public <TT>void addData(EruptModel eruptModel, Object data) {
         try {
             this.loadSupport(data);
             this.jpaManyToOneConvert(eruptModel, data);
@@ -86,7 +86,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
 
     @Transactional
     @Override
-    public <TT>void editData(EruptModel<TT> eruptModel, Object data) {
+    public <TT>void editData(EruptModel eruptModel, Object data) {
         try {
             this.loadSupport(data);
             eruptJpaDao.editEntity(eruptModel.getClazz(), data);
@@ -102,7 +102,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //优化异常提示类
-    private <TT>void handlerException(Exception e, EruptModel<TT> eruptModel) {
+    private <TT>void handlerException(Exception e, EruptModel eruptModel) {
         e.printStackTrace();
         if (e instanceof DataIntegrityViolationException) {
             if (e.getMessage().contains("ConstraintViolationException")) {
@@ -119,7 +119,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
 
     @Transactional
     @Override
-    public <TT>void deleteData(EruptModel<TT> eruptModel, Object object) {
+    public <TT>void deleteData(EruptModel eruptModel, Object object) {
         try {
             eruptJpaDao.removeEntity(eruptModel.getClazz(), object);
         } catch (DataIntegrityViolationException | ConstraintViolationException e) {
@@ -131,7 +131,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //@ManyToOne数据处理
-    private <TT>void jpaManyToOneConvert(EruptModel<TT> eruptModel, Object object) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+    private <TT>void jpaManyToOneConvert(EruptModel eruptModel, Object object) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
         for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
             if (fieldModel.getEruptField().edit().type() == EditType.TAB_TABLE_ADD) {
                 Field field = ReflectUtil.findClassField(object.getClass(), fieldModel.getFieldName());
@@ -149,7 +149,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
     }
 
     //生成数据重复的提示字符串
-    private <TT>String gcRepeatHint(EruptModel<TT> eruptModel) {
+    private <TT>String gcRepeatHint(EruptModel eruptModel) {
         StringBuilder str = new StringBuilder();
         for (UniqueConstraint uniqueConstraint : eruptModel.getClazz().getAnnotation(Table.class).uniqueConstraints()) {
             for (String columnName : uniqueConstraint.columnNames()) {
@@ -176,7 +176,7 @@ public class EruptDataServiceDbImpl implements IEruptDataService {
      * @return 数据结果集
      */
     @Override
-    public <TT>Collection<TT> queryColumn(EruptModel<TT> eruptModel, List<Column> columns, EruptQuery query) {
+    public <TT>Collection<TT> queryColumn(EruptModel eruptModel, List<Column> columns, EruptQuery query) {
         StringBuilder hql = new StringBuilder();
         List<String> columnStrList = new ArrayList<>();
         columns.forEach(column -> columnStrList.add(EruptJpaUtils.completeHqlPath(eruptModel.getEruptName()

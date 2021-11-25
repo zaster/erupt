@@ -17,7 +17,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -40,6 +43,7 @@ import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.annotation.sub_field.sub_edit.ChoiceType;
 import xyz.erupt.annotation.sub_field.sub_edit.TagsType;
 import xyz.erupt.core.annotation.EruptAttachmentUpload;
+import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.exception.EruptApiErrorTip;
 import xyz.erupt.core.service.EruptApplication;
 import xyz.erupt.core.service.EruptCoreService;
@@ -54,9 +58,11 @@ import xyz.erupt.core.view.EruptModel;
 @Slf4j
 public class EruptUtil {
 
+    private final static Gson gson = GsonFactory.getGson();
+
     //将object中erupt标识的字段抽取出来放到map中
     @SneakyThrows
-    public static <T> Map<String, Object> generateEruptDataMap(EruptModel<T> eruptModel, Object obj) {
+    public static <T> Map<String, Object> generateEruptDataMap(EruptModel eruptModel, Object obj) {
         Map<String, Object> map = new HashMap<>();
         for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
             
@@ -71,7 +77,7 @@ public class EruptUtil {
                     
                     case CHECKBOX:
                     case TAB_TREE:
-                        EruptModel<?> tabEruptModel = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
+                        EruptModel tabEruptModel = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
                         Collection<?> collection = (Collection<?>) value;
                         if (collection.size() > 0) {
                             Set<Object> idSet = new HashSet<>();
@@ -85,7 +91,7 @@ public class EruptUtil {
                         break;
                     case TAB_TABLE_REFER:
                     case TAB_TABLE_ADD:
-                        EruptModel<?> tabEruptModelRef = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
+                        EruptModel tabEruptModelRef = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
                         Collection<?> collectionRef = (Collection<?>) value;
                         List<Object> list = new ArrayList<>();
                         for (Object o : collectionRef) {
@@ -94,7 +100,7 @@ public class EruptUtil {
                         map.put(field.getName(), list);
                         break;
                     default:
-                        EruptModel<?> em = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
+                        EruptModel em = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
                         
                     if (em!=null&&em.getEruptFieldModels()!=null)
                         map.put(field.getName(), generateEruptDataMap(em, value));
@@ -125,18 +131,21 @@ public class EruptUtil {
         return choiceMap;
     }
 
-    public static Map<String,Object> getOptions(ChoiceType choiceType) {
-        Map<String,Object> map= new HashMap<String,Object>();
-        Stream.of(choiceType.vl()).forEach(vl->{
-            map.put(vl.value(), new ColorText(vl.label(), vl.color()));
-        });
-        Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(clazz -> {
-            Optional.ofNullable(EruptSpringUtil.getBean(clazz).fetch(choiceType.fetchHandlerParams())).get().stream().forEach(vl->{
-                
-                map.put(vl.getValue(), new ColorText(vl.getText(),vl.getColor()));
-            });
-        });
-        return map;
+    public static JsonObject getOptions(ChoiceType choiceType) {
+        final JsonObject jsonObject =  Stream.of(choiceType.vl()).collect(()->new JsonObject(), (json,vl)->{
+            JsonObject el = new JsonObject();
+            el.addProperty(vl.label(),vl.color());
+            json.add(vl.value(),el);
+        }, (json,json1)->{});
+        Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
+            EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it->{
+                JsonObject el = new JsonObject();
+                el.addProperty(it.getLabel(),it.getColor());
+                jsonObject.add(it.getValue(),el);
+            });;
+            
+        }});
+        return jsonObject;
     }
   
     public static List<VLModel> getChoiceList(ChoiceType choiceType) {
@@ -187,7 +196,7 @@ public class EruptUtil {
     }
 
     //生成一个合法的searchCondition
-    public static <T> List<Condition> geneEruptSearchCondition(EruptModel<T> eruptModel, List<Condition> searchCondition) {
+    public static <T> List<Condition> geneEruptSearchCondition(EruptModel eruptModel, List<Condition> searchCondition) {
         checkEruptSearchNotnull(eruptModel, searchCondition);
         List<Condition> legalConditions = new ArrayList<>();
         if (null != searchCondition) {
@@ -218,7 +227,7 @@ public class EruptUtil {
         return legalConditions;
     }
 
-    public static <T>void checkEruptSearchNotnull(EruptModel<T> eruptModel, List<Condition> searchCondition) {
+    public static <T>void checkEruptSearchNotnull(EruptModel eruptModel, List<Condition> searchCondition) {
         Map<String, Condition> conditionMap = new HashMap<>();
         if (null != searchCondition) {
             searchCondition.forEach(condition -> conditionMap.put(condition.getKey(), condition));
@@ -239,21 +248,22 @@ public class EruptUtil {
         }
     }
 
-    public static <T>EruptApiModel validateEruptValue(EruptModel<T> eruptModel, JSONObject jsonObject) {
+    public static <T>EruptApiModel validateEruptValue(EruptModel eruptModel, JsonObject jsonObject) {
         for (EruptFieldModel field : eruptModel.getEruptFieldModels()) {
             Edit edit = field.getEruptField().edit();
-            Object value = jsonObject.get(field.getFieldName());
+            JsonElement value = jsonObject.get(field.getFieldName());
             if (field.getEruptField().edit().notNull()) {
-                if (null == value || FastJsonUtil.isEmpty(value)) {
+                if (null == value || value.isJsonNull()) {
+                    
                     return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                 } else if (String.class.getSimpleName().equals(field.getFieldReturnName())) {
-                    if (StringUtils.isBlank(value.toString())) {
+                    if (StringUtils.isBlank(value.getAsString())) {
                         return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                     }
                 }
             }
             if (field.getEruptField().edit().type() == EditType.COMBINE) {
-                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()), jsonObject.getJSONObject(field.getFieldName()));
+                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()), jsonObject.getAsJsonObject(field.getFieldName()));
                 if (eam.getStatus() == EruptApiModel.Status.ERROR) {
                     return eam;
                 }
@@ -298,7 +308,7 @@ public class EruptUtil {
     }
 
     //将对象A的非空数据源覆盖到对象B中
-    public static Object dataTarget(EruptModel<Object> eruptModel, Object data, Object target, SceneEnum sceneEnum) {
+    public static Object dataTarget(EruptModel eruptModel, Object data, Object target, SceneEnum sceneEnum) {
         ReflectUtil.findClassAllFields(eruptModel.getClazz(), (field) -> {
             EruptField eruptField = field.getAnnotation(EruptField.class);
             if (null != eruptField) {
@@ -328,11 +338,11 @@ public class EruptUtil {
     }
 
     //清理序列化后对象所产生的默认值（通过json串进行校验）
-    public static void clearObjectDefaultValueByJson(Object obj, JSONObject data) {
+    public static void clearObjectDefaultValueByJson(Object obj, JsonObject data) {
         ReflectUtil.findClassAllFields(obj.getClass(), field -> {
             try {
                 if (null != PropertyUtils.getProperty(obj, field.getName())) {
-                    if (!data.containsKey(field.getName())) {
+                    if (!data.has(field.getName())) {
                         field.set(obj, null);
                     }
                 }
@@ -364,15 +374,17 @@ public class EruptUtil {
         return null;
     }
 
-    public static Map<String,Object> getYn(BoolType type ) {
+    public static JsonElement getYn(BoolType type ) {
         
         Map<String,Object> map= new HashMap<String,Object>();
         map.put(true+"", new ColorText("是","green"));
         map.put(false+"", new ColorText("否","red"));
-        if (type==null) return map;
-        map.put(true+"",  new ColorText(type.trueText(),"green"));
-        map.put(false+"", new ColorText(type.falseText(),"red"));
-        return map;
+        if (type!=null) {
+            map.put(true+"",  new ColorText(type.trueText(),"green"));
+            map.put(false+"", new ColorText(type.falseText(),"red")); 
+        }
+        
+        return gson.toJsonTree(map, new TypeToken<HashMap<String, Object>>() {}.getType());
     }
 
     public static Object getTag(Edit ed) {

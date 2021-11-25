@@ -44,7 +44,7 @@ public interface DataProxy<@Comment("Erupt类对象") T> {
     }
 
     @Comment("查询后结果处理")
-    default void afterFetch(@Comment("查询结果") Collection<T> list) {
+    default void afterFetch(@Comment("查询结果") Collection<T> collection) {
     }
 
 
