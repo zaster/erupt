@@ -1,9 +1,11 @@
 package xyz.erupt.core.util;
 
-import org.apache.commons.lang3.math.NumberUtils;
-
 import java.util.Arrays;
-import java.util.function.Consumer;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import org.apache.commons.lang3.math.NumberUtils;
 
 /**
  * @author YuePeng
@@ -44,30 +46,44 @@ public class TypeUtil {
         }
     }
 
-    public static void simpleNumberTypeArrayToObject(Object obj, String type, Consumer<Number> consumer) {
+    public static void simpleNumberTypeArrayToObject(Object obj, String type,ArrayNode array) {
+
         if (int.class.getSimpleName().equals(type)) {
-            for (Number i : (int[]) obj) {
-                consumer.accept(i);
+            for (Integer i : (int[]) obj) {
+                array.add(i);
             }
         } else if (short.class.getSimpleName().equals(type)) {
-            for (Number i : (short[]) obj) {
-                consumer.accept(i);
+            for (Short i : (short[]) obj) {
+                array.add(i);
             }
         } else if (long.class.getSimpleName().equals(type)) {
-            for (Number i : (long[]) obj) {
-                consumer.accept(i);
+            for (Long i : (long[]) obj) {
+                array.add(i);
             }
         } else if (float.class.getSimpleName().equals(type)) {
-            for (Number i : (float[]) obj) {
-                consumer.accept(i);
+            for (Float i : (float[]) obj) {
+                array.add(i);
             }
         } else if (double.class.getSimpleName().equals(type)) {
-            for (Number i : (double[]) obj) {
-                consumer.accept(i);
+            for (Double i : (double[]) obj) {
+                array.add(i);
             }
         }
     }
+    public static void simpleNumberTypeToObject(Object obj, String type,ObjectNode onode,String fieldName) {
 
+        if (int.class.getSimpleName().equals(type)) {
+            onode.put(fieldName, (int)obj);
+        } else if (short.class.getSimpleName().equals(type)) {
+            onode.put(fieldName, (short)obj);
+        } else if (long.class.getSimpleName().equals(type)) {
+            onode.put(fieldName, (long)obj);
+        } else if (float.class.getSimpleName().equals(type)) {
+            onode.put(fieldName, (float)obj);
+        } else if (double.class.getSimpleName().equals(type)) {
+            onode.put(fieldName, (double)obj);
+        }
+    }
     // 判断实体类字段返回值是否为基本类型（包括String与date）
     public static boolean isFieldSimpleType(String typeName) {
         return Arrays.asList(SIMPLE_JPA_TYPE).contains(typeName.toLowerCase());

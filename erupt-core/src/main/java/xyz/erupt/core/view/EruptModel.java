@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +28,7 @@ public final class EruptModel implements Cloneable {
 
     private String eruptName;
 
-    private JsonObject eruptJson;
+    private ObjectNode eruptJson;
 
     private List<EruptFieldModel> eruptFieldModels;
 

@@ -18,7 +18,7 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -214,8 +214,9 @@ public class EruptFileController {
             Map<String, Object> map = uploadHtmlEditorImage(eruptName, fieldName, file);
             Boolean status = (Boolean) map.get("uploaded");
             map.put("state", status ? "SUCCESS" : "ERROR");
+            ObjectMapper mapper = new ObjectMapper();
             
-            response.getOutputStream().write(new Gson().toJson(map).getBytes(StandardCharsets.UTF_8));
+            response.getOutputStream().write(mapper.writeValueAsBytes(map));
         }
 
     }

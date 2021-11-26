@@ -1,10 +1,26 @@
 package xyz.erupt.upms.service;
 
-import com.google.gson.Gson;
-import eu.bitwalker.useragentutils.UserAgent;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import xyz.erupt.core.config.GsonFactory;
+
+import eu.bitwalker.useragentutils.UserAgent;
 import xyz.erupt.core.prop.EruptAppProp;
 import xyz.erupt.core.prop.EruptProp;
 import xyz.erupt.core.service.EruptApplication;
@@ -24,18 +40,14 @@ import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.model.log.EruptLoginLog;
 import xyz.erupt.upms.util.IpUtil;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-import javax.transaction.Transactional;
-import java.time.LocalDateTime;
-import java.util.*;
-
 /**
  * @author YuePeng
  * date 2018-12-13.
  */
 @Service
 public class EruptUserService {
+
+    private ObjectMapper mapper = new ObjectMapper();
 
     @Resource
     private EruptSessionService sessionService;
@@ -61,11 +73,10 @@ public class EruptUserService {
     @Resource
     private EruptMenuService eruptMenuService;
 
-    private final Gson gson = GsonFactory.getGson();
 
     public static final String LOGIN_ERROR_HINT = "账号或密码错误";
 
-    public void cacheUserInfo(EruptUser eruptUser, String token) {
+    public void cacheUserInfo(EruptUser eruptUser, String token) throws JsonProcessingException {
         List<EruptMenu> eruptMenus = eruptMenuService.getUserAllMenu(eruptUser);
         Map<String, Object> valueMap = new HashMap<>();
         Map<String, Object> codeMap = new HashMap<>();
@@ -81,7 +92,8 @@ public class EruptUserService {
         }
         sessionService.putMap(SessionKey.MENU_VALUE_MAP + token, valueMap, eruptUpmsConfig.getExpireTimeByLogin());
         sessionService.putMap(SessionKey.MENU_CODE_MAP + token, codeMap, eruptUpmsConfig.getExpireTimeByLogin());
-        sessionService.put(SessionKey.MENU_VIEW + token, gson.toJson(eruptMenuService.geneMenuListVo(eruptMenus)), eruptUpmsConfig.getExpireTimeByLogin());
+        
+        sessionService.put(SessionKey.MENU_VIEW + token, mapper.writeValueAsString(eruptMenuService.geneMenuListVo(eruptMenus)), eruptUpmsConfig.getExpireTimeByLogin());
         sessionService.put(SessionKey.ROLE_POWER + token, sb.toString(), eruptUpmsConfig.getExpireTimeByLogin());
     }
 
@@ -212,12 +224,12 @@ public class EruptUserService {
     }
 
     //当前用户菜单中，通过编码获取菜单
-    public EruptMenu getEruptMenuByCode(String menuValue) {
+    public EruptMenu getEruptMenuByCode(String menuValue) throws JsonMappingException, JsonProcessingException {
         return sessionService.getMapValue(SessionKey.MENU_CODE_MAP + eruptContextService.getCurrentToken(), menuValue, EruptMenu.class);
     }
 
     //当前用户菜单中，通过菜单类型值获取菜单
-    public EruptMenu getEruptMenuByValue(String menuValue) {
+    public EruptMenu getEruptMenuByValue(String menuValue) throws JsonMappingException, JsonProcessingException {
         return sessionService.getMapValue(SessionKey.MENU_VALUE_MAP + eruptContextService.getCurrentToken(), menuValue, EruptMenu.class);
     }
 

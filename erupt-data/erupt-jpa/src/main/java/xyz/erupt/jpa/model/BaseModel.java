@@ -1,15 +1,20 @@
 package xyz.erupt.jpa.model;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.GenericGenerator;
-import xyz.erupt.annotation.EruptField;
+import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
-import java.io.Serializable;
+
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import lombok.Getter;
+import lombok.Setter;
+import xyz.erupt.annotation.EruptField;
 
 /**
  * @author YuePeng
@@ -18,6 +23,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @MappedSuperclass
+@JsonIdentityInfo(generator =ObjectIdGenerators.PropertyGenerator.class, property = "id" )
 public class BaseModel implements Serializable {
 
     @Id

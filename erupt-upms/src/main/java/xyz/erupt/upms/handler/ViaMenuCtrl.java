@@ -1,12 +1,15 @@
 package xyz.erupt.upms.handler;
 
+import javax.annotation.Resource;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.expr.ExprBool;
 import xyz.erupt.core.util.EruptAssert;
 import xyz.erupt.upms.service.EruptUserService;
-
-import javax.annotation.Resource;
 
 /**
  * @author YuePeng
@@ -25,7 +28,13 @@ public class ViaMenuCtrl implements ExprBool.ExprHandler {
     @Comment("params必填，值为菜单编码")
     public boolean handler(boolean expr, String[] params) {
         EruptAssert.notNull(params,ViaMenuCtrl.class.getSimpleName() + " → params[0] not found");
-        return null != eruptUserService.getEruptMenuByCode(params[0]);
+        try {
+            return null != eruptUserService.getEruptMenuByCode(params[0]);
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return true;
     }
 
 }

@@ -17,10 +17,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +42,6 @@ import xyz.erupt.annotation.sub_field.sub_edit.BoolType;
 import xyz.erupt.annotation.sub_field.sub_edit.ChoiceType;
 import xyz.erupt.annotation.sub_field.sub_edit.TagsType;
 import xyz.erupt.core.annotation.EruptAttachmentUpload;
-import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.exception.EruptApiErrorTip;
 import xyz.erupt.core.service.EruptApplication;
 import xyz.erupt.core.service.EruptCoreService;
@@ -58,7 +56,7 @@ import xyz.erupt.core.view.EruptModel;
 @Slf4j
 public class EruptUtil {
 
-    private final static Gson gson = GsonFactory.getGson();
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     //将object中erupt标识的字段抽取出来放到map中
     @SneakyThrows
@@ -131,17 +129,17 @@ public class EruptUtil {
         return choiceMap;
     }
 
-    public static JsonObject getOptions(ChoiceType choiceType) {
-        final JsonObject jsonObject =  Stream.of(choiceType.vl()).collect(()->new JsonObject(), (json,vl)->{
-            JsonObject el = new JsonObject();
-            el.addProperty(vl.label(),vl.color());
-            json.add(vl.value(),el);
+    public static ObjectNode getOptions(ChoiceType choiceType) {
+        final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->mapper.createObjectNode(), (json,vl)->{
+            ObjectNode el = mapper.createObjectNode();
+            el.put(vl.label(),vl.color());
+            json.set(vl.value(),el);
         }, (json,json1)->{});
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
             EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it->{
-                JsonObject el = new JsonObject();
-                el.addProperty(it.getLabel(),it.getColor());
-                jsonObject.add(it.getValue(),el);
+                ObjectNode el = mapper.createObjectNode();
+                el.put(it.getLabel(),it.getColor());
+                jsonObject.set(it.getValue(),el);
             });;
             
         }});
@@ -248,28 +246,28 @@ public class EruptUtil {
         }
     }
 
-    public static <T>EruptApiModel validateEruptValue(EruptModel eruptModel, JsonObject jsonObject) {
+    public static <T>EruptApiModel validateEruptValue(EruptModel eruptModel, JsonNode jsonObject) {
         for (EruptFieldModel field : eruptModel.getEruptFieldModels()) {
             Edit edit = field.getEruptField().edit();
-            JsonElement value = jsonObject.get(field.getFieldName());
+            JsonNode value = jsonObject.get(field.getFieldName());
             if (field.getEruptField().edit().notNull()) {
-                if (null == value || value.isJsonNull()) {
+                if (jsonObject.hasNonNull(field.getFieldName())) {
                     
                     return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                 } else if (String.class.getSimpleName().equals(field.getFieldReturnName())) {
-                    if (StringUtils.isBlank(value.getAsString())) {
+                    if (StringUtils.isBlank(value.textValue())) {
                         return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                     }
                 }
             }
             if (field.getEruptField().edit().type() == EditType.COMBINE) {
-                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()), jsonObject.getAsJsonObject(field.getFieldName()));
+                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()), jsonObject.get(field.getFieldName()));
                 if (eam.getStatus() == EruptApiModel.Status.ERROR) {
                     return eam;
                 }
             }
 
-            if (null != value) {
+            if (!value.isNull()) {
                 //xss 注入处理
                 if (edit.type() == EditType.TEXTAREA || edit.type() == EditType.INPUT) {
                     if (SecurityUtil.xssInspect(value.toString())) {
@@ -280,13 +278,13 @@ public class EruptUtil {
                 switch (edit.type()) {
                     case NUMBER:
                     case SLIDER:
-                        if (!NumberUtils.isCreatable(value.toString())) {
+                        if (!NumberUtils.isCreatable(value.asText())) {
                             return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必须为数值");
                         }
                         break;
                     case INPUT:
                         if (!AnnotationConst.EMPTY_STR.equals(edit.inputType().regex())) {
-                            String content = value.toString();
+                            String content = value.asText();
                             if (StringUtils.isNotBlank(content)) {
                                 if (!Pattern.matches(edit.inputType().regex(), content)) {
                                     return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "格式不正确");
@@ -315,35 +313,27 @@ public class EruptUtil {
                 boolean readonly = sceneEnum == SceneEnum.EDIT ? eruptField.edit().readonly().edit() : eruptField.edit().readonly().add();
                 if (StringUtils.isNotBlank(eruptField.edit().title()) && !readonly) {
                     try {
-                        Field f = ReflectUtil.findClassField(eruptModel.getClazz(), field.getName());
-                        if (eruptField.edit().type() == EditType.TAB_TABLE_ADD) {
-                            Collection<?> s = (Collection<?>) f.get(target);
-                            if (null == s) {
-                                f.set(target, f.get(data));
-                            } else {
-                                s.clear();
-                                s.addAll((Collection) f.get(data));
-                                f.set(target, s);
-                            }
-                        } else {
-                            f.set(target, f.get(data));
-                        }
-                    } catch (IllegalAccessException e) {
+                        Object dataFieldValue = (Collection<?>)PropertyUtils.getProperty(data, field.getName());
+                        PropertyUtils.setProperty(target, field.getName(), dataFieldValue);
+                         
+                    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                         e.printStackTrace();
                     }
                 }
             }
+            
         });
         return target;
     }
 
     //清理序列化后对象所产生的默认值（通过json串进行校验）
-    public static void clearObjectDefaultValueByJson(Object obj, JsonObject data) {
+    public static void clearObjectDefaultValueByJson(Object obj, ObjectNode data) {
         ReflectUtil.findClassAllFields(obj.getClass(), field -> {
             try {
                 if (null != PropertyUtils.getProperty(obj, field.getName())) {
                     if (!data.has(field.getName())) {
-                        field.set(obj, null);
+                        PropertyUtils.setProperty(obj, field.getName(), null);
+                        //field.set(obj, null);
                     }
                 }
             } catch (IllegalAccessException e) {
@@ -374,7 +364,7 @@ public class EruptUtil {
         return null;
     }
 
-    public static JsonElement getYn(BoolType type ) {
+    public static JsonNode getYn(BoolType type ) {
         
         Map<String,Object> map= new HashMap<String,Object>();
         map.put(true+"", new ColorText("是","green"));
@@ -384,7 +374,7 @@ public class EruptUtil {
             map.put(false+"", new ColorText(type.falseText(),"red")); 
         }
         
-        return gson.toJsonTree(map, new TypeToken<HashMap<String, Object>>() {}.getType());
+        return mapper.convertValue(map, JsonNode.class);
     }
 
     public static Object getTag(Edit ed) {

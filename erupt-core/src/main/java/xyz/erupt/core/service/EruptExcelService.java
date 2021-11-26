@@ -12,7 +12,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +62,8 @@ import xyz.erupt.core.view.Page;
  */
 @Service
 public class EruptExcelService {
+
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public static final String XLS_FORMAT = ".xls";
 
@@ -133,7 +136,7 @@ public class EruptExcelService {
         return wb;
     }
 
-    public <TT>List<JsonObject> excelToEruptObject(EruptModel eruptModel, Workbook workbook) throws Exception {
+    public <TT>List<ObjectNode> excelToEruptObject(EruptModel eruptModel, Workbook workbook) throws Exception {
         Sheet sheet = workbook.getSheetAt(0);
         Row titleRow = sheet.getRow(0);
         Map<String, EruptFieldModel> editTitleMappingEruptField = new HashMap<>(eruptModel.getEruptFieldModels().size());
@@ -199,13 +202,13 @@ public class EruptExcelService {
                     break;
             }
         }
-        List<JsonObject> listObject = new ArrayList<>();
+        List<ObjectNode> listObject = new ArrayList<>();
         for (int rowNum = 1; rowNum <= sheet.getLastRowNum(); rowNum++) {
             Row row = sheet.getRow(rowNum);
             if (row.getPhysicalNumberOfCells() == 0) {
                 continue;
             }
-            JsonObject jsonObject = new JsonObject();
+            ObjectNode jsonObject = mapper.createObjectNode();
             for (int cellNum = 0; cellNum < titleRow.getPhysicalNumberOfCells(); cellNum++) {
                 Cell cell = row.getCell(cellNum);
                 EruptFieldModel eruptFieldModel = cellIndexMapping.get(cellNum);
@@ -214,23 +217,23 @@ public class EruptExcelService {
                     switch (edit.type()) {
                         case REFERENCE_TABLE:
                         case REFERENCE_TREE:
-                            JsonObject jo = new JsonObject();
+                            ObjectNode jo = mapper.createObjectNode();
                             try {
                                 if (edit.type() == EditType.REFERENCE_TREE) {
-                                    jo.addProperty(edit.referenceTreeType().id(),
+                                    jo.put(edit.referenceTreeType().id(),
                                             cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue()).toString());
                                 } else if (edit.type() == EditType.REFERENCE_TABLE) {
-                                    jo.addProperty(edit.referenceTableType().id(),
+                                    jo.put(edit.referenceTableType().id(),
                                             cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue()).toString());
                                 }
                             } catch (Exception e) {
                                 throw new Exception(edit.title() + " -> " + this.getStringCellValue(cell) + "数据不存在");
                             }
-                            jsonObject.add(eruptFieldModel.getFieldName(), jo);
+                            jsonObject.set(eruptFieldModel.getFieldName(), jo);
                             break;
                         case CHOICE:
                             try {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), cellIndexJoinEruptMap.get(cellNum)
+                                jsonObject.put(eruptFieldModel.getFieldName(), cellIndexJoinEruptMap.get(cellNum)
                                         .get(cell.getStringCellValue()).toString());
                             } catch (Exception e) {
                                 throw new Exception(edit.title() + " -> " + this.getStringCellValue(cell) + "数据不存在");
@@ -238,16 +241,16 @@ public class EruptExcelService {
                             break;
                         case BOOLEAN:
                             Boolean bool = (Boolean) cellIndexJoinEruptMap.get(cellNum).get(cell.getStringCellValue());
-                            jsonObject.addProperty(eruptFieldModel.getFieldName(), bool);
+                            jsonObject.put(eruptFieldModel.getFieldName(), bool);
                             break;
                         default:
                             String rn = eruptFieldModel.getFieldReturnName();
                             if (String.class.getSimpleName().equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), this.getStringCellValue(cell));
+                                jsonObject.put(eruptFieldModel.getFieldName(), this.getStringCellValue(cell));
                             } else if (JavaType.NUMBER.equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), cell.getNumericCellValue());
+                                jsonObject.put(eruptFieldModel.getFieldName(), cell.getNumericCellValue());
                             } else if (Date.class.getSimpleName().equals(rn)) {
-                                jsonObject.addProperty(eruptFieldModel.getFieldName(), DateUtil.getSimpleFormatDate(cell.getDateCellValue()));
+                                jsonObject.put(eruptFieldModel.getFieldName(), DateUtil.getSimpleFormatDate(cell.getDateCellValue()));
                             }
                             break;
                     }

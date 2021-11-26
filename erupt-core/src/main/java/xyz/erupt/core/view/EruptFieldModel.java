@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +43,7 @@ public class EruptFieldModel extends CloneSupport<EruptFieldModel> {
 
     private String fieldName;
 
-    private JsonObject eruptFieldJson;
+    private ObjectNode eruptFieldJson;
 
     private Object value;
 

@@ -4,15 +4,15 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -57,6 +57,8 @@ import xyz.erupt.core.view.TableQueryVo;
 @RequiredArgsConstructor
 public class EruptExcelController {
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private final EruptProp eruptProp;
 
     private final EruptExcelService dataFileService;
@@ -96,9 +98,8 @@ public class EruptExcelController {
         tableQueryVo.setPageIndex(1);
         tableQueryVo.setDataExport(true);
         if (null != condition) {
-            List<Condition> conditions = new Gson().fromJson(URLDecoder
-                    .decode(condition, StandardCharsets.UTF_8.name()), new TypeToken<List<Condition>>() {
-            }.getType());            
+            List<Condition> conditions = mapper.readValue(URLDecoder
+                    .decode(condition, StandardCharsets.UTF_8.name()), new ArrayList<Condition>().getClass());            
             tableQueryVo.setCondition(conditions);
         }
         Page<Object> page = eruptService.getEruptData(eruptModel, tableQueryVo, null);
@@ -119,7 +120,7 @@ public class EruptExcelController {
             return EruptApiModel.errorApi("上传失败，请选择文件");
         }
         String fileName = file.getOriginalFilename();
-        List<JsonObject> list;
+        List<ObjectNode> list;
         int i = 1;
         try {
             i++;

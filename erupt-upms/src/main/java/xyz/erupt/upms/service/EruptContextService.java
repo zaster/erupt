@@ -1,14 +1,18 @@
 package xyz.erupt.upms.service;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.core.service.EruptCoreService;
 import xyz.erupt.upms.constant.EruptReqHeaderConst;
 import xyz.erupt.upms.constant.SessionKey;
 import xyz.erupt.upms.model.EruptMenu;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * @author YuePeng
@@ -46,7 +50,7 @@ public class EruptContextService {
     }
 
     //获取当前菜单对象
-    public EruptMenu getCurrentEruptMenu() {
+    public EruptMenu getCurrentEruptMenu() throws JsonMappingException, JsonProcessingException {
         return sessionService.getMapValue(SessionKey.MENU_VALUE_MAP + getCurrentToken()
                 , this.getEruptHeader(), EruptMenu.class);
     }

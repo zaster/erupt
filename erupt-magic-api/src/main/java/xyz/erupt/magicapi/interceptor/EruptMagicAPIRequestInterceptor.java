@@ -1,5 +1,13 @@
 package xyz.erupt.magicapi.interceptor;
 
+import java.util.Objects;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.ssssssss.magicapi.interceptor.Authorization;
@@ -10,16 +18,13 @@ import org.ssssssss.magicapi.model.ApiInfo;
 import org.ssssssss.magicapi.model.JsonBean;
 import org.ssssssss.magicapi.model.Options;
 import org.ssssssss.script.MagicScriptContext;
+
 import xyz.erupt.magicapi.service.MagicAPIDataLoadService;
 import xyz.erupt.upms.cache.CaffeineEruptCache;
 import xyz.erupt.upms.cache.IEruptCache;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.service.EruptContextService;
 import xyz.erupt.upms.service.EruptUserService;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Objects;
 
 /**
  * magic-api UI鉴权、接口鉴权
@@ -49,9 +54,11 @@ public class EruptMagicAPIRequestInterceptor implements RequestInterceptor, Auth
 
     /**
      * 配置接口权限
+     * @throws JsonProcessingException
+     * @throws JsonMappingException
      */
     @Override
-    public Object preHandle(ApiInfo info, MagicScriptContext context, HttpServletRequest request, HttpServletResponse response) {
+    public Object preHandle(ApiInfo info, MagicScriptContext context, HttpServletRequest request, HttpServletResponse response) throws JsonMappingException, JsonProcessingException {
         String permission = Objects.toString(info.getOptionValue(Options.PERMISSION), "");
         String role = Objects.toString(info.getOptionValue(Options.ROLE), "");
         String login = Objects.toString(info.getOptionValue(Options.REQUIRE_LOGIN), "");
@@ -84,7 +91,13 @@ public class EruptMagicAPIRequestInterceptor implements RequestInterceptor, Auth
     @Override
     public boolean allowVisit(MagicUser magicUser, HttpServletRequest request, Authorization authorization) {
         // 未登录或UI权限不足
-        return eruptUserService.getCurrentUid() != null
-                && eruptUserService.getEruptMenuByValue(MagicAPIDataLoadService.MAGIC_API_MENU_PREFIX + authorization.name()) != null;
+        try {
+            return eruptUserService.getCurrentUid() != null
+                    && eruptUserService.getEruptMenuByValue(MagicAPIDataLoadService.MAGIC_API_MENU_PREFIX + authorization.name()) != null;
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return false;
+        }
     }
 }

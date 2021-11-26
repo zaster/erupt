@@ -12,8 +12,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.expression.EvaluationContext;
@@ -51,14 +52,16 @@ public class AnnotationUtil {
 
     private static final String ITEM_VAR = "item";
 
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     @SneakyThrows
-    public static JsonObject annotationToJsonByReflect(Annotation annotation) {
+    public static ObjectNode annotationToJsonByReflect(Annotation annotation) {
         return annotationToJson(annotation);
     }
 
-    private static JsonObject annotationToJson(Annotation annotation)
+    private static ObjectNode annotationToJson(Annotation annotation)
             throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        JsonObject jsonObject = new JsonObject();
+        ObjectNode jsonObject = mapper.createObjectNode();
         for (Method method : annotation.annotationType().getDeclaredMethods()) {
             Transient tran = method.getAnnotation(Transient.class);
             if (null != tran && tran.value()) {
@@ -93,12 +96,14 @@ public class AnnotationUtil {
             }
             if (returnType.endsWith(EMPTY_ARRAY)) {
                 returnType = returnType.substring(0, returnType.length() - 2);
-                JsonArray jsonArray = new JsonArray();
+                ArrayNode jsonArray = mapper.createArrayNode();
+                
                 ToMap toMap = method.getAnnotation(ToMap.class);
-                JsonObject jsonMap = new JsonObject();
+                ObjectNode jsonMap = mapper.createObjectNode();
                 //基本类型无法强转成Object类型数组，所以使用下面的方法进行处理
                 if (Arrays.asList(ANNOTATION_NUMBER_TYPE).contains(returnType)) {
-                    TypeUtil.simpleNumberTypeArrayToObject(result, returnType, jsonArray::add);
+                    
+                    TypeUtil.simpleNumberTypeArrayToObject(result, returnType, jsonArray);
                 } else {
                     for (Object res : (Object[]) result) {
                         if (String.class.getSimpleName().equals(returnType)) {
@@ -116,10 +121,10 @@ public class AnnotationUtil {
                         } else {
                             Annotation ann = (Annotation) res;
                             if (null != toMap) {
-                                JsonObject jo = annotationToJson((Annotation) res);
+                                ObjectNode jo = annotationToJson((Annotation) res);
                                 String key = ann.annotationType().getMethod(toMap.key()).invoke(res).toString();
                                 jo.remove(toMap.key());
-                                jsonMap.add(key, jo);
+                                jsonMap.set(key, jo);
                             } else {
                                 jsonArray.add(annotationToJson(ann));
                             }
@@ -127,25 +132,25 @@ public class AnnotationUtil {
                     }
                 }
                 if (null == toMap) {
-                    jsonObject.add(methodName, jsonArray);
+                    jsonObject.set(methodName, jsonArray);
                 } else {
                     if (jsonMap.size() > 0) {
-                        jsonObject.add(methodName, jsonMap);
+                        jsonObject.set(methodName, jsonMap);
                     }
                 }
             } else {
                 if (Arrays.asList(ANNOTATION_STRING_TYPE).contains(returnType)) {
-                    jsonObject.addProperty(methodName, result.toString());
+                    jsonObject.put(methodName, result.toString());
                 } else if (Arrays.asList(ANNOTATION_NUMBER_TYPE).contains(returnType)) {
-                    jsonObject.addProperty(methodName, (Number) result);
+                    TypeUtil.simpleNumberTypeToObject(result, returnType, jsonObject, methodName);
                 } else if (boolean.class.getSimpleName().equals(returnType)) {
-                    jsonObject.addProperty(methodName, (Boolean) result);
+                    jsonObject.put(methodName, (Boolean) result);
                 } else if (method.getReturnType().isEnum()) {
-                    jsonObject.addProperty(methodName, result.toString());
+                    jsonObject.put(methodName, result.toString());
                 } else if (method.getReturnType().isAnnotation()) {
-                    jsonObject.add(methodName, annotationToJson((Annotation) result));
+                    jsonObject.set(methodName, annotationToJson((Annotation) result));
                 } else if (Class.class.getSimpleName().equals(returnType)) {
-                    jsonObject.addProperty(methodName, ((Class<?>) result).getSimpleName());
+                    jsonObject.put(methodName, ((Class<?>) result).getSimpleName());
                 }
             }
         }
@@ -168,7 +173,7 @@ public class AnnotationUtil {
 //                .replace("=", ":")
 //                .replace("(", "{")
 //                .replace(")", "}");
-//        return new JsonObject(convertStr).toString();
+//        return new ObjectNode(convertStr).toString();
 //    }
 
     @SneakyThrows

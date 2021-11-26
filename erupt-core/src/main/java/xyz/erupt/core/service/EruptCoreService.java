@@ -6,8 +6,9 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -44,6 +45,7 @@ import xyz.erupt.core.view.EruptModel;
 @Slf4j
 public class EruptCoreService implements ApplicationRunner {
 
+    private static final ObjectMapper mapper = new ObjectMapper();
     private static final Map<String, EruptModel> ERUPTS = new LinkedCaseInsensitiveMap<>();
 
     public static  <TT>EruptModel getErupt(String eruptName) {
@@ -62,36 +64,36 @@ public class EruptCoreService implements ApplicationRunner {
                 fieldModel.setTagList(EruptUtil.getTagList(edit.tagsType()));
             }
             STColumn[] columns = fieldModel.getEruptField().columns();
-            JsonArray jsonArray = new JsonArray();
+            ArrayNode jsonArray = mapper.createArrayNode();
             Arrays.stream(columns).forEach(column->{
                 
-                JsonObject jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
+                ObjectNode jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
                 {
                     
                     String title = column.title();
                     String desc = column.desc();
-                    JsonObject titleObject=new JsonObject();
-                    titleObject.addProperty("text", title);
-                    titleObject.addProperty("optionHelp", desc);
-                    jsonObject.add("title", titleObject);
+                    ObjectNode titleObject=mapper.createObjectNode();
+                    titleObject.put("text", title);
+                    titleObject.put("optionHelp", desc);
+                    jsonObject.set("title", titleObject);
                 }
                 switch(column.type()) {
                     case BADGE:
                         
-                        jsonObject.add("badge", EruptUtil.getOptions(column.choices()));
+                        jsonObject.set("badge", EruptUtil.getOptions(column.choices()));
                         break;
                     case YN:
-                        jsonObject.addProperty("type", "tag");
-                        jsonObject.add("tag", EruptUtil.getYn(column.bools()));
+                        jsonObject.put("type", "tag");
+                        jsonObject.set("tag", EruptUtil.getYn(column.bools()));
                         break;
                     case TAG:
-                        jsonObject.add("tag", EruptUtil.getOptions(column.choices()));
+                        jsonObject.set("tag", EruptUtil.getOptions(column.choices()));
                         break;
                 }
                 
                 jsonArray.add(jsonObject);
             });
-            fieldModel.getEruptFieldJson().add("columns", jsonArray);
+            fieldModel.getEruptFieldJson().set("columns", jsonArray);
         }
         if (em.getErupt().rowOperation().length > 0) {
             boolean copy = false;
@@ -101,10 +103,10 @@ public class EruptCoreService implements ApplicationRunner {
                         copy = true;
                         em.setEruptJson(em.getEruptJson().deepCopy());
                     }
-                    JsonArray jsonArray = em.getEruptJson().getAsJsonArray("rowOperation");
-                    Optional.ofNullable(jsonArray).get().forEach(operation->{
-                        if (rowOperation.code().equals(((JsonObject)operation).get("code").getAsString())) {
-                            jsonArray.remove(operation);
+                    ArrayNode jsonArray = (ArrayNode)em.getEruptJson().get("rowOperation");
+                    jsonArray.forEach(node->{
+                        if (rowOperation.code().equals(node.get("code").asText())){
+                            
                             return;
                         }
                     });

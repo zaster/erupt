@@ -1,7 +1,20 @@
 package xyz.erupt.upms.service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.annotation.fun.DataProxy;
 import xyz.erupt.core.exception.EruptWebApiRuntimeException;
 import xyz.erupt.jpa.dao.EruptDao;
@@ -10,10 +23,6 @@ import xyz.erupt.upms.model.EruptMenu;
 import xyz.erupt.upms.model.EruptRole;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.vo.EruptMenuVo;
-
-import javax.annotation.Resource;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author YuePeng
@@ -70,7 +79,12 @@ public class EruptMenuService implements DataProxy<EruptMenu> {
         if (StringUtils.isNotBlank(eruptMenu.getType()) && StringUtils.isBlank(eruptMenu.getValue())) {
             throw new EruptWebApiRuntimeException("When selecting a menu type, the type value cannot be empty");
         }
-        eruptUserService.cacheUserInfo(eruptUserService.getCurrentEruptUser(), eruptContextService.getCurrentToken());
+        try {
+            eruptUserService.cacheUserInfo(eruptUserService.getCurrentEruptUser(), eruptContextService.getCurrentToken());
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     @Override

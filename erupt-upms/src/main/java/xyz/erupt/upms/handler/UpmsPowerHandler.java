@@ -1,7 +1,14 @@
 package xyz.erupt.upms.handler;
 
+import java.util.Optional;
+
+import javax.annotation.Resource;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+
 import xyz.erupt.annotation.fun.PowerHandler;
 import xyz.erupt.annotation.fun.PowerObject;
 import xyz.erupt.core.invoke.PowerInvoke;
@@ -9,9 +16,6 @@ import xyz.erupt.upms.constant.SessionKey;
 import xyz.erupt.upms.enums.MenuLimitEnum;
 import xyz.erupt.upms.service.EruptContextService;
 import xyz.erupt.upms.service.EruptSessionService;
-
-import javax.annotation.Resource;
-import java.util.Optional;
 
 /**
  * 全局菜单权限控制
@@ -34,11 +38,16 @@ public class UpmsPowerHandler implements PowerHandler {
 
     @Override
     public void handler(PowerObject power) {
-        Optional.ofNullable(eruptContextService.getCurrentEruptMenu()).ifPresent(eruptMenu -> {
-            this.powerOff(eruptMenu.getPowerOff(), power);
-            Optional.of(eruptSessionService.get(SessionKey.ROLE_POWER + eruptContextService.getCurrentToken()))
-                    .ifPresent(it -> this.powerOff(it.toString(), power));
-        });
+        try {
+            Optional.ofNullable(eruptContextService.getCurrentEruptMenu()).ifPresent(eruptMenu -> {
+                this.powerOff(eruptMenu.getPowerOff(), power);
+                Optional.of(eruptSessionService.get(SessionKey.ROLE_POWER + eruptContextService.getCurrentToken()))
+                        .ifPresent(it -> this.powerOff(it.toString(), power));
+            });
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     private void powerOff(String powerStr, PowerObject power) {

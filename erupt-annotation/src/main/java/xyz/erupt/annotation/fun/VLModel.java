@@ -13,7 +13,7 @@ public class VLModel {
 
     private String value;
 
-    private String text;
+    private String label;
 
     private String color;
 
@@ -26,7 +26,7 @@ public class VLModel {
     }
     public VLModel(String value, String label, String color,String desc, boolean disable) {
         this.value = value;
-        this.text = label;
+        this.label = label;
         this.color = color;
         this.desc = desc;
         this.disable = disable;
@@ -34,5 +34,5 @@ public class VLModel {
 
     public VLModel() {
     }
-    public String getLabel() {return this.text;}
+    public String getText() {return this.label;}
 }

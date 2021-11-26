@@ -1,11 +1,27 @@
 package xyz.erupt.upms.controller;
 
-import com.google.gson.reflect.TypeToken;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.wf.captcha.SpecCaptcha;
 import com.wf.captcha.base.Captcha;
-import lombok.SneakyThrows;
+
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import lombok.SneakyThrows;
 import xyz.erupt.core.annotation.EruptRouter;
 import xyz.erupt.core.constant.EruptRestPath;
 import xyz.erupt.core.prop.EruptAppProp;
@@ -20,13 +36,6 @@ import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 import xyz.erupt.upms.util.IpUtil;
 import xyz.erupt.upms.vo.EruptMenuVo;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author YuePeng
@@ -98,8 +107,15 @@ public class EruptUserController {
     @GetMapping("/menu")
     @EruptRouter(verifyType = EruptRouter.VerifyType.LOGIN, authIndex = 0)
     public List<EruptMenuVo> getMenu() {
-        return sessionService.get(SessionKey.MENU_VIEW + eruptContextService.getCurrentToken(), new TypeToken<List<EruptMenuVo>>() {
-        }.getType());
+        try {
+            return sessionService.get(SessionKey.MENU_VIEW + eruptContextService.getCurrentToken(), new TypeReference<List<EruptMenuVo>>() {
+            });
+        } catch (JsonProcessingException e) {
+            // TODO Auto-generated catch block
+            
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
     //登出

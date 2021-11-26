@@ -11,9 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -44,7 +44,6 @@ import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTableType;
 import xyz.erupt.annotation.sub_field.sub_edit.ReferenceTreeType;
 import xyz.erupt.core.annotation.EruptRecordOperate;
 import xyz.erupt.core.annotation.EruptRouter;
-import xyz.erupt.core.config.GsonFactory;
 import xyz.erupt.core.constant.EruptRestPath;
 import xyz.erupt.core.exception.EruptNoLegalPowerException;
 import xyz.erupt.core.exception.EruptWebApiRuntimeException;
@@ -84,7 +83,6 @@ public class EruptDataController {
 
         private final PreEruptDataService preEruptDataService;
 
-        private final Gson gson = GsonFactory.getGson();
 
         private final I18NTranslateService i18NTranslateService;
 
@@ -134,10 +132,13 @@ public class EruptDataController {
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, @RequestBody JsonObject body) {
+                        @PathVariable("code") String code, @RequestBody JsonNode body) {
 
+               
+                ObjectMapper mapper =new ObjectMapper();
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                JsonObject paramobj = (!body.get("param").isJsonNull()) ? body.getAsJsonObject("param") : null;
+                
+                JsonNode paramobj = (!body.has("param")) ? body.get("param") : null;
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
@@ -153,35 +154,41 @@ public class EruptDataController {
                 if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
                         EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
                         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,
-                                        body.getAsJsonObject("param"));
+                                        body.get("param"));
                         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
                                 return eruptApiModel;
                 }
 
                 Object param = null;
                 // 表单形式参数
-                if (paramobj != null && rowOperation.eruptMode() == EruptMode.FORM) {
-                        param = gson.fromJson(paramobj, rowOperation.eruptClass());
+                if (paramobj != null &&!paramobj.isNull()&& rowOperation.eruptMode() == EruptMode.FORM) {
+                        try {
+                                param=mapper.treeToValue(paramobj, rowOperation.eruptClass());
+                        } catch (JsonProcessingException | IllegalArgumentException e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                        }
+                     
                 } else {
                         param = paramobj;
                 }
                 // 表格形式参数
                 List<Object> list = new ArrayList<>();
                 Object o = body.get("ids");
-                if (body.get("ids").isJsonArray() && body.getAsJsonArray("ids").size() > 0) {
+                if (body.get("ids").isArray() && body.get("ids").size() > 0) {
 
-                        for (JsonElement id : body.getAsJsonArray("ids")) {
+                        for (JsonNode id : body.get("ids")) {
                                 Object obj = null;
                                 if (rowOperation.eruptMode() == EruptMode.FORM) {
                                         obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
                                                         .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel,
-                                                                        id.getAsString()));
+                                                                        id.asText()));
                                 } else {
                                         EruptModel tableEruptModel = EruptCoreService
                                                         .getErupt(rowOperation.eruptClass().getSimpleName());
                                         obj = DataProcessorManager.getEruptDataProcessor(tableEruptModel.getClazz())
                                                         .findDataById(tableEruptModel, EruptUtil
-                                                                        .toEruptId(tableEruptModel, id.getAsString()));
+                                                                        .toEruptId(tableEruptModel, id.asText()));
                                 }
 
                                 list.add(obj);
@@ -374,12 +381,20 @@ public class EruptDataController {
 
         @PostMapping("/validate-erupt/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JsonObject data) {
+        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JsonNode data) {
                 EruptModel eruptModel = EruptCoreService.getErupt(erupt);
                 EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
+                ObjectMapper mapper = new ObjectMapper();
                 if (eruptApiModel.getStatus() == EruptApiModel.Status.SUCCESS) {
-                        DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy
-                        .beforeAdd(gson.fromJson(data, eruptModel.getClazz()))));
+                        DataProxyInvoke.invoke(eruptModel, (dataProxy -> {
+                                try {
+                                        dataProxy
+                                        .beforeAdd(mapper.treeToValue(data, eruptModel.getClazz()));
+                                } catch (JsonProcessingException | IllegalArgumentException e) {
+                                        // TODO Auto-generated catch block
+                                        e.printStackTrace();
+                                }
+                        }));
                 }
                 eruptApiModel.setErrorIntercept(false);
                 eruptApiModel.setPromptWay(EruptApiModel.PromptWay.MESSAGE);
