@@ -45,6 +45,8 @@ public class EruptDrillController {
 
     private final EruptService eruptService;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     @PostMapping("{erupt}/drill/{code}/{id}")
     @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     public Page drill(@PathVariable("erupt") String eruptName, @PathVariable("code") String code,
@@ -65,8 +67,9 @@ public class EruptDrillController {
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
     public EruptApiModel drillAdd(@PathVariable("erupt") String erupt, @PathVariable("code") String code,
-            @PathVariable("id") String id, @RequestBody ObjectNode data, HttpServletRequest request) throws Exception {
+            @PathVariable("id") String id, @RequestBody String datastring, HttpServletRequest request) throws Exception {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+        ObjectNode data = mapper.readValue(datastring, ObjectNode.class);
         Link link = findDrillLink(eruptModel.getErupt(), code);
         eruptService.verifyIdPermissions(eruptModel, id);
         ObjectMapper mapper = new ObjectMapper();
@@ -83,7 +86,7 @@ public class EruptDrillController {
         } else {
             jo.put(joinColumn, val.toString());
         }
-        return eruptModifyController.addEruptData(link.linkErupt().getSimpleName(), data, jo, request);
+        return eruptModifyController.addEruptData(link.linkErupt().getSimpleName(), data.toString(), jo.toString(), request);
     }
 
     private Link findDrillLink(Erupt erupt, String code) {

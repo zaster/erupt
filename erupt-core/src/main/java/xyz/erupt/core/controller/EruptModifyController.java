@@ -60,9 +60,12 @@ public class EruptModifyController {
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data,
-                ObjectNode jsonObject, HttpServletRequest request) {
+    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody String datastring,
+                String datastring1, HttpServletRequest request) {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
+        ObjectNode data = mapper.readValue(datastring,ObjectNode.class);
+        ObjectNode jsonObject = StringUtils.isBlank(datastring1)?mapper.createObjectNode():mapper.readValue(datastring1, ObjectNode.class);
+        Object o = mapper.readValue(datastring,eruptModel.getClazz());
         Erupts.powerLegal(eruptModel, PowerObject::isAdd);
         LinkTree dependTree = eruptModel.getErupt().linkTree();
         if (StringUtils.isNotBlank(dependTree.field()) && dependTree.dependNode()) {
@@ -82,7 +85,7 @@ public class EruptModifyController {
         }
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
-        Object o = mapper.treeToValue(data, eruptModel.getClazz());
+        //Object o = mapper.treeToValue(data, eruptModel.getClazz());
         EruptUtil.clearObjectDefaultValueByJson(o, data);
         Object obj = EruptUtil.dataTarget(eruptModel, o, eruptModel.getClazz().newInstance(), SceneEnum.ADD);
         if (!jsonObject.isNull()&&!jsonObject.isEmpty()) {
@@ -104,14 +107,15 @@ public class EruptModifyController {
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.afterAdd(obj)));
         return EruptApiModel.successApi();
     }
-
+    @SneakyThrows
     @PutMapping("/{erupt}")
     @EruptRecordOperate(value = "修改", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data) throws IllegalAccessException {
+    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody  String datastring) throws IllegalAccessException {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isEdit);
+        ObjectNode data = mapper.readValue(datastring,ObjectNode.class);
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;

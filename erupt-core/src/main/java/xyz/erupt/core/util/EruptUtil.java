@@ -132,7 +132,8 @@ public class EruptUtil {
     public static ObjectNode getOptions(ChoiceType choiceType) {
         final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->mapper.createObjectNode(), (json,vl)->{
             ObjectNode el = mapper.createObjectNode();
-            el.put(vl.label(),vl.color());
+            el.put("text",vl.label());
+            el.put("color",vl.color());
             json.set(vl.value(),el);
         }, (json,json1)->{});
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
@@ -251,7 +252,7 @@ public class EruptUtil {
             Edit edit = field.getEruptField().edit();
             JsonNode value = jsonObject.get(field.getFieldName());
             if (field.getEruptField().edit().notNull()) {
-                if (jsonObject.hasNonNull(field.getFieldName())) {
+                if (!jsonObject.hasNonNull(field.getFieldName())) {
                     
                     return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                 } else if (String.class.getSimpleName().equals(field.getFieldReturnName())) {
@@ -267,7 +268,7 @@ public class EruptUtil {
                 }
             }
 
-            if (!value.isNull()) {
+            if (value!=null&&!value.isNull()) {
                 //xss 注入处理
                 if (edit.type() == EditType.TEXTAREA || edit.type() == EditType.INPUT) {
                     if (SecurityUtil.xssInspect(value.toString())) {
@@ -313,7 +314,7 @@ public class EruptUtil {
                 boolean readonly = sceneEnum == SceneEnum.EDIT ? eruptField.edit().readonly().edit() : eruptField.edit().readonly().add();
                 if (StringUtils.isNotBlank(eruptField.edit().title()) && !readonly) {
                     try {
-                        Object dataFieldValue = (Collection<?>)PropertyUtils.getProperty(data, field.getName());
+                        Object dataFieldValue = PropertyUtils.getProperty(data, field.getName());
                         PropertyUtils.setProperty(target, field.getName(), dataFieldValue);
                          
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -329,25 +330,19 @@ public class EruptUtil {
     //清理序列化后对象所产生的默认值（通过json串进行校验）
     public static void clearObjectDefaultValueByJson(Object obj, ObjectNode data) {
         ReflectUtil.findClassAllFields(obj.getClass(), field -> {
-            try {
-                if (null != PropertyUtils.getProperty(obj, field.getName())) {
-                    if (!data.has(field.getName())) {
-                        PropertyUtils.setProperty(obj, field.getName(), null);
-                        //field.set(obj, null);
+           
+                try {
+                    log.info(obj.getClass().getSimpleName());
+                    log.info(field.getName());
+                    if (null != PropertyUtils.getProperty(obj, field.getName())&&
+                        !data.has(field.getName())) {
+                            PropertyUtils.setProperty(obj, field.getName(), null);
                     }
+                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IllegalArgumentException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            
         });
     }
 

@@ -135,7 +135,7 @@ public class EruptExcelController {
             throw new EruptWebApiRuntimeException("Excel解析异常，出错行数：" + i + "，原因：" + e.getMessage(), e);
         }
         for (int j = 0; j < list.size(); j++) {
-            EruptApiModel eruptApiModel = eruptModifyController.addEruptData(eruptName, list.get(j), null, request);
+            EruptApiModel eruptApiModel = eruptModifyController.addEruptData(eruptName, list.get(j).toString(), null, request);
             if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) {
                 throw new EruptWebApiRuntimeException("数据入库异常，出错行数：" + (j + 1) + "，原因：" + eruptApiModel.getMessage());
             }
