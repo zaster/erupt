@@ -45,7 +45,7 @@ public class EruptDrillController {
 
     private final EruptService eruptService;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper objectMapper ;
 
     @PostMapping("{erupt}/drill/{code}/{id}")
     @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -69,18 +69,17 @@ public class EruptDrillController {
     public EruptApiModel drillAdd(@PathVariable("erupt") String erupt, @PathVariable("code") String code,
             @PathVariable("id") String id, @RequestBody String datastring, HttpServletRequest request) throws Exception {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
-        ObjectNode data = mapper.readValue(datastring, ObjectNode.class);
+        ObjectNode data = objectMapper.readValue(datastring, ObjectNode.class);
         Link link = findDrillLink(eruptModel.getErupt(), code);
         eruptService.verifyIdPermissions(eruptModel, id);
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode jo = mapper.createObjectNode();
+        ObjectNode jo = objectMapper.createObjectNode();
         String joinColumn = link.joinColumn();
         Field field = ReflectUtil.findClassField(eruptModel.getClazz(), link.column());
         Object val= PropertyUtils.getProperty(DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
         .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id)), field.getName());
         if (joinColumn.contains(".")) {
             String[] jc = joinColumn.split("\\.");
-            ObjectNode jo2 = mapper.createObjectNode();
+            ObjectNode jo2 = objectMapper.createObjectNode();
             jo2.put(jc[1], val.toString());
             jo.set(jc[0], jo2);
         } else {

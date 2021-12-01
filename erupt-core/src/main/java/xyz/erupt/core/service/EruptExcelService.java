@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -62,8 +63,8 @@ import xyz.erupt.core.view.Page;
  */
 @Service
 public class EruptExcelService {
-
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Resource
+    private ObjectMapper objectMapper ;
 
     public static final String XLS_FORMAT = ".xls";
 
@@ -208,7 +209,7 @@ public class EruptExcelService {
             if (row.getPhysicalNumberOfCells() == 0) {
                 continue;
             }
-            ObjectNode jsonObject = mapper.createObjectNode();
+            ObjectNode jsonObject = objectMapper.createObjectNode();
             for (int cellNum = 0; cellNum < titleRow.getPhysicalNumberOfCells(); cellNum++) {
                 Cell cell = row.getCell(cellNum);
                 EruptFieldModel eruptFieldModel = cellIndexMapping.get(cellNum);
@@ -217,7 +218,7 @@ public class EruptExcelService {
                     switch (edit.type()) {
                         case REFERENCE_TABLE:
                         case REFERENCE_TREE:
-                            ObjectNode jo = mapper.createObjectNode();
+                            ObjectNode jo = objectMapper.createObjectNode();
                             try {
                                 if (edit.type() == EditType.REFERENCE_TREE) {
                                     jo.put(edit.referenceTreeType().id(),

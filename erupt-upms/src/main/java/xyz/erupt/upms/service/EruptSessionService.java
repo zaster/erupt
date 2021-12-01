@@ -24,7 +24,8 @@ import xyz.erupt.core.prop.EruptProp;
  */
 @Component
 public class EruptSessionService {
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Resource
+    private  ObjectMapper mapper ;
 
     @Resource
     private EruptProp eruptProp;

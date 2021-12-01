@@ -17,10 +17,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.stereotype.Component;
 
 import lombok.SneakyThrows;
 import xyz.erupt.annotation.config.AutoFill;
@@ -38,6 +40,7 @@ import xyz.erupt.annotation.sub_field.EditTypeSearch;
  * @author YuePeng
  * date 2019-02-28.
  */
+@Component
 public class AnnotationUtil {
 
     private static final String[] ANNOTATION_NUMBER_TYPE = {"short", "int", "long", "float", "double"};
@@ -52,7 +55,11 @@ public class AnnotationUtil {
 
     private static final String ITEM_VAR = "item";
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static ObjectMapper objectMapper ;
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        AnnotationUtil.objectMapper=objectMapper;
+    }
 
     @SneakyThrows
     public static ObjectNode annotationToJsonByReflect(Annotation annotation) {
@@ -61,7 +68,7 @@ public class AnnotationUtil {
 
     private static ObjectNode annotationToJson(Annotation annotation)
             throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        ObjectNode jsonObject = mapper.createObjectNode();
+        ObjectNode jsonObject = objectMapper.createObjectNode();
         for (Method method : annotation.annotationType().getDeclaredMethods()) {
             Transient tran = method.getAnnotation(Transient.class);
             if (null != tran && tran.value()) {
@@ -96,10 +103,10 @@ public class AnnotationUtil {
             }
             if (returnType.endsWith(EMPTY_ARRAY)) {
                 returnType = returnType.substring(0, returnType.length() - 2);
-                ArrayNode jsonArray = mapper.createArrayNode();
+                ArrayNode jsonArray = objectMapper.createArrayNode();
                 
                 ToMap toMap = method.getAnnotation(ToMap.class);
-                ObjectNode jsonMap = mapper.createObjectNode();
+                ObjectNode jsonMap = objectMapper.createObjectNode();
                 //基本类型无法强转成Object类型数组，所以使用下面的方法进行处理
                 if (Arrays.asList(ANNOTATION_NUMBER_TYPE).contains(returnType)) {
                     

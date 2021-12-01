@@ -54,7 +54,7 @@ import xyz.erupt.core.view.EruptModel;
 @RequiredArgsConstructor
 public class EruptModifyController {
     private final EruptService eruptService;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     @SneakyThrows
     @PostMapping({"/{erupt}"})
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
@@ -63,9 +63,9 @@ public class EruptModifyController {
     public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody String datastring,
                 String datastring1, HttpServletRequest request) {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
-        ObjectNode data = mapper.readValue(datastring,ObjectNode.class);
-        ObjectNode jsonObject = StringUtils.isBlank(datastring1)?mapper.createObjectNode():mapper.readValue(datastring1, ObjectNode.class);
-        Object o = mapper.readValue(datastring,eruptModel.getClazz());
+        ObjectNode data = objectMapper.readValue(datastring,ObjectNode.class);
+        ObjectNode jsonObject = StringUtils.isBlank(datastring1)?objectMapper.createObjectNode():objectMapper.readValue(datastring1, ObjectNode.class);
+        Object o = objectMapper.readValue(datastring,eruptModel.getClazz());
         Erupts.powerLegal(eruptModel, PowerObject::isAdd);
         LinkTree dependTree = eruptModel.getErupt().linkTree();
         if (StringUtils.isNotBlank(dependTree.field()) && dependTree.dependNode()) {
@@ -75,9 +75,9 @@ public class EruptModifyController {
                 if (StringUtils.isBlank(linkVal)) {
                     return EruptApiModel.errorApi("请选择树节点");
                 } else {
-                    if (jsonObject.isNull()) jsonObject = mapper.createObjectNode();
+                    if (jsonObject.isNull()) jsonObject = objectMapper.createObjectNode();
                     String rm = ReflectUtil.findClassField(eruptModel.getClazz(), dependTree.field()).getType().getSimpleName();
-                    ObjectNode sub =  mapper.createObjectNode();
+                    ObjectNode sub =  objectMapper.createObjectNode();
                     sub.put(EruptCoreService.getErupt(rm).getErupt().primaryKeyCol(), linkVal);
                     jsonObject.set(dependTree.field(), sub);
                 }
@@ -93,7 +93,7 @@ public class EruptModifyController {
 
                 Field field = ReflectUtil.findClassField(eruptModel.getClazz(), f.getKey());
                 try {
-                    PropertyUtils.setProperty(obj, f.getKey(),mapper.treeToValue(f.getValue(), field.getType()));
+                    PropertyUtils.setProperty(obj, f.getKey(),objectMapper.treeToValue(f.getValue(), field.getType()));
                 } catch (JsonProcessingException | IllegalAccessException | InvocationTargetException
                         | NoSuchMethodException | IllegalArgumentException e) {
                     // TODO Auto-generated catch block
@@ -115,14 +115,14 @@ public class EruptModifyController {
     public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody  String datastring) throws IllegalAccessException {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isEdit);
-        ObjectNode data = mapper.readValue(datastring,ObjectNode.class);
+        ObjectNode data = objectMapper.readValue(datastring,ObjectNode.class);
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
         eruptService.verifyIdPermissions(eruptModel, data.get(eruptModel.getErupt().primaryKeyCol()).asText());
-        Object o=mapper.createObjectNode();
+        Object o=objectMapper.createObjectNode();
         try {
-            o = mapper.treeToValue(data, eruptModel.getClazz());
+            o = objectMapper.treeToValue(data, eruptModel.getClazz());
         } catch (JsonProcessingException | IllegalArgumentException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

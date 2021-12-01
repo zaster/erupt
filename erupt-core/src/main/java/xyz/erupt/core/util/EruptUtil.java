@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -54,10 +56,13 @@ import xyz.erupt.core.view.EruptModel;
  * date 11/1/18.
  */
 @Slf4j
+@Component
 public class EruptUtil {
-
-    private static final ObjectMapper mapper = new ObjectMapper();
-
+    private static ObjectMapper objectMapper ;
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        EruptUtil.objectMapper = objectMapper;
+    }
     //将object中erupt标识的字段抽取出来放到map中
     @SneakyThrows
     public static <T> Map<String, Object> generateEruptDataMap(EruptModel eruptModel, Object obj) {
@@ -130,16 +135,17 @@ public class EruptUtil {
     }
 
     public static ObjectNode getOptions(ChoiceType choiceType) {
-        final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->mapper.createObjectNode(), (json,vl)->{
-            ObjectNode el = mapper.createObjectNode();
+        final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->objectMapper.createObjectNode(), (json,vl)->{
+            ObjectNode el = objectMapper.createObjectNode();
             el.put("text",vl.label());
-            el.put("color",vl.color());
+            el.put("color",StringUtils.isBlank(vl.color())?"default":vl.color());
             json.set(vl.value(),el);
         }, (json,json1)->{});
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
             EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it->{
-                ObjectNode el = mapper.createObjectNode();
-                el.put(it.getLabel(),it.getColor());
+                ObjectNode el = objectMapper.createObjectNode();
+                el.put("text",it.getLabel());
+                el.put("color",StringUtils.isBlank(it.getColor())?"default":it.getColor());
                 jsonObject.set(it.getValue(),el);
             });;
             
@@ -369,7 +375,7 @@ public class EruptUtil {
             map.put(false+"", new ColorText(type.falseText(),"red")); 
         }
         
-        return mapper.convertValue(map, JsonNode.class);
+        return objectMapper.convertValue(map, JsonNode.class);
     }
 
     public static Object getTag(Edit ed) {

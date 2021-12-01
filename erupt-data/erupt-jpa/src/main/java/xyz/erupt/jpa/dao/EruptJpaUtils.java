@@ -1,5 +1,7 @@
 package xyz.erupt.jpa.dao;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -15,8 +17,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.query.Condition;
-import xyz.erupt.annotation.sub_field.Edit;
-import xyz.erupt.annotation.sub_field.EditType;
 import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.core.query.EruptQuery;
 import xyz.erupt.core.util.AnnotationUtil;
@@ -47,19 +47,14 @@ public class EruptJpaUtils {
         String eruptNameSymbol = eruptModel.getEruptName() + ".";
         cols.add(eruptNameSymbol + eruptModel.getErupt().primaryKeyCol() + AS + eruptModel.getErupt().primaryKeyCol());
         eruptModel.getEruptFieldModels().forEach(field -> {
-            if (null != field.getField().getAnnotation(OneToMany.class)
-                    || null != field.getField().getAnnotation(ManyToMany.class)) {
+            Field f = field.getField();
+            if (null != f.getAnnotation(OneToMany.class)
+                    || null != f.getAnnotation(ManyToMany.class)
+                    || null != f.getAnnotation(Transient.class)) {
                 return;
             }
-            if (null != field.getField().getAnnotation(Transient.class)) {
-                return;
-            }
-            for (STColumn column : field.getEruptField().columns()) {
-                if (column.index().length() == 0) {
-                    cols.add(eruptNameSymbol + field.getFieldName()) ;
-                } else {
-                    cols.add(eruptNameSymbol + field.getFieldName() + "." + column.index()) ;
-                }
+            if (field.getEruptField()!=null) {
+                cols.add(eruptNameSymbol + field.getFieldName()) ;
             }
         });
         return cols;
@@ -120,40 +115,27 @@ public class EruptJpaUtils {
         // condition
         if (null != conditions) {
             for (Condition condition : conditions) {
-                EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(condition.getKey());
-                if (null != eruptFieldModel) {
-                    Edit edit = eruptFieldModel.getEruptField().edit();
-                    if (edit.type() == EditType.REFERENCE_TREE) {
-                        hql.append(EruptJpaUtils.AND).append(condition.getKey()).append(".")
-                                .append(edit.referenceTreeType().id()).append("=:").append(condition.getKey());
-                        continue;
-                    } else if (edit.type() == EditType.REFERENCE_TABLE) {
-                        hql.append(EruptJpaUtils.AND).append(condition.getKey()).append(".")
-                                .append(edit.referenceTableType().id()).append("=:").append(condition.getKey());
-                        continue;
-                    }
-                    String _key = EruptJpaUtils.completeHqlPath(eruptModel.getEruptName(), condition.getKey());
+                String _key = EruptJpaUtils.completeHqlPath(eruptModel.getEruptName(), condition.getKey());
+                String paramKey = condition.getKey().replace("\\.", "_");
+                switch (condition.getExpression()) {
 
-                    switch (condition.getExpression()) {
-                    case EQ:
-                        hql.append(EruptJpaUtils.AND).append(_key).append("=:").append(condition.getKey());
-                        break;
                     case LIKE:
-                        hql.append(EruptJpaUtils.AND).append(_key).append(" like :").append(condition.getKey());
+                        hql.append(EruptJpaUtils.AND).append(_key).append(" like :").append(paramKey);
                         break;
                     case RANGE:
                         hql.append(EruptJpaUtils.AND).append(_key).append(" between :").append(L_VAL_KEY)
-                                .append(condition.getKey()).append(" and :").append(R_VAL_KEY)
-                                .append(condition.getKey());
+                                .append(paramKey).append(" and :").append(R_VAL_KEY)
+                                .append(paramKey);
                         break;
                     case IN:
-                        hql.append(EruptJpaUtils.AND).append(_key).append(" in (:").append(condition.getKey())
+                        hql.append(EruptJpaUtils.AND).append(_key).append(" in (:").append(paramKey)
                                 .append(")");
                         break;
+                    default:
+                        hql.append(EruptJpaUtils.AND).append(_key).append("=:").append(paramKey);
+                        break;
                     }
-                } else {
-                    hql.append(EruptJpaUtils.AND).append(condition.getKey()).append("=:").append(condition.getKey());
-                }
+               
             }
         }
         AnnotationUtil.switchFilterConditionToStr(eruptModel.getErupt().filter()).forEach(it -> {
@@ -168,23 +150,26 @@ public class EruptJpaUtils {
     }
 
     public static String geneEruptHqlOrderBy(EruptModel eruptModel, String orderBy) {
-        if (StringUtils.isNotBlank(orderBy)) {
-            return " order by " + EruptJpaUtils.completeHqlPath(eruptModel.getEruptName(), orderBy);
-        } else if (StringUtils.isNotBlank(eruptModel.getErupt().orderBy())) {
-            return " order by "
-                    + EruptJpaUtils.completeHqlPath(eruptModel.getEruptName(), eruptModel.getErupt().orderBy());
-        } else {
-            return "";
+        if (StringUtils.isBlank(orderBy)){
+            if (StringUtils.isAllBlank(eruptModel.getErupt().orderBy()))
+                return "";
+            orderBy = eruptModel.getErupt().orderBy();
         }
+        StringBuilder sb = new StringBuilder(" order by ");
+        List<String> orderList = new ArrayList<String>();
+        ///Stream.of(orderBy.split(",")).collect(ArrayList<String>::new, (List<String>list,String str)->{list.add();}, List<String>::addAll)));
+        for(String str: orderBy.split(",")) {
+            orderList.add(completeHqlPath(eruptModel.getEruptName(), str));
+        }
+        sb.append(String.join(",", orderList));
+
+        
+        return sb.toString();
     }
 
     // 在left join的情况下要求必须指定表信息，通过此方法生成；
     public static String completeHqlPath(String eruptName, String hqlPath) {
-        if (hqlPath.contains(".")) {
-            return hqlPath;
-        } else {
-            return eruptName + "." + hqlPath;
-        }
+        return eruptName + "." + hqlPath;
     }
 
 }

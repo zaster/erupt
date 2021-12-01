@@ -57,7 +57,6 @@ public class EruptFieldModel extends CloneSupport<EruptFieldModel> {
         this.eruptField = field.getAnnotation(EruptField.class);
         Edit edit = eruptField.edit();
         this.fieldName = field.getName();
-        log.info(this.fieldName+">"+this.fieldReturnName);
         //数字类型转换
         if (TypeUtil.isNumberType(field.getType().getSimpleName())) {
             this.fieldReturnName = JavaType.NUMBER;

@@ -1,19 +1,21 @@
 package xyz.erupt.jpa.dao;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Resource;
 import javax.persistence.Query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.stereotype.Repository;
 
+import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.core.annotation.EruptDataSource;
 import xyz.erupt.core.query.EruptQuery;
-import xyz.erupt.core.util.EruptUtil;
-import xyz.erupt.core.view.EruptFieldModel;
+import xyz.erupt.core.util.ReflectUtil;
 import xyz.erupt.core.view.EruptModel;
 import xyz.erupt.core.view.Page;
 import xyz.erupt.jpa.service.EntityManagerService;
@@ -22,11 +24,13 @@ import xyz.erupt.jpa.service.EntityManagerService;
  * @author YuePeng date 2018-10-11.
  */
 @Repository
+@Slf4j
 public class EruptJpaDao {
 
     @Resource
     private EntityManagerService entityManagerService;
-
+    @Resource
+    private ObjectMapper objectMapper;
     public void addEntity(Class<?> eruptClass, Object entity) {
         entityManagerService.entityManagerTran(eruptClass, (em) -> {
             em.persist(entity);
@@ -55,37 +59,49 @@ public class EruptJpaDao {
 
     public <T> Page<T> queryEruptList(EruptModel eruptModel, Page<T> page, EruptQuery eruptQuery) {
         String hql = EruptJpaUtils.generateEruptJpaHql(eruptModel, eruptModel.getEruptName(), eruptQuery, false);
+        log.info(hql);
+        
         String countHql = EruptJpaUtils.generateEruptJpaHql(eruptModel, "count(*)", eruptQuery, true);
+        log.info(countHql);
         return entityManagerService.getEntityManager(eruptModel.getClazz(), entityManager -> {
             Query query = entityManager.createQuery(hql);
             Query countQuery = entityManager.createQuery(countHql);
-            Map<String, EruptFieldModel> eruptFieldMap = eruptModel.getEruptFieldMap();
+            
             if (null != eruptQuery.getConditions()) {
                 for (Condition condition : eruptQuery.getConditions()) {
-                    EruptFieldModel eruptFieldModel = eruptFieldMap.get(condition.getKey());
+                    Field conditionField = ReflectUtil.findClassField(eruptModel.getClazz(), condition.getKey());
+                    log.info(condition.getValue().getClass().getName());
+                    String paramKey = condition.getKey().replace("\\.", "_");
+                    List<Object> paramList = new ArrayList<>();
+                    Object paramValue = condition.getValue();
+                    if (paramValue instanceof List) {
+                        ((List<?>)paramValue).forEach(p->{
+                            paramList.add(objectMapper.convertValue(p, conditionField.getType()));
+                        });
+                    } else {
+                        paramList.add(objectMapper.convertValue(paramValue, conditionField.getType()));
+                    } 
                     switch (condition.getExpression()) {
-                    case EQ:
-                        countQuery.setParameter(condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, condition.getValue()));
-                        query.setParameter(condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, condition.getValue()));
-                        break;
                     case LIKE:
-                        countQuery.setParameter(condition.getKey(), EruptJpaUtils.PERCENT + condition.getValue() + EruptJpaUtils.PERCENT);
-                        query.setParameter(condition.getKey(), EruptJpaUtils.PERCENT + condition.getValue() + EruptJpaUtils.PERCENT);
+                        countQuery.setParameter(paramKey, EruptJpaUtils.PERCENT + paramList.get(0) + EruptJpaUtils.PERCENT);
+                        query.setParameter(paramKey, EruptJpaUtils.PERCENT +  paramList.get(0) + EruptJpaUtils.PERCENT);
                         break;
                     case RANGE:
-                        List<?> list = (List<?>) condition.getValue();
-                        countQuery.setParameter(EruptJpaUtils.L_VAL_KEY + condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, list.get(0)));
-                        countQuery.setParameter(EruptJpaUtils.R_VAL_KEY + condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, list.get(1)));
-                        query.setParameter(EruptJpaUtils.L_VAL_KEY + condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, list.get(0)));
-                        query.setParameter(EruptJpaUtils.R_VAL_KEY + condition.getKey(), EruptUtil.convertObjectType(eruptFieldModel, list.get(1)));
+                        Object lParamValue = paramList.get(0);
+                        Object rParamValue = paramList.get(1);
+                        countQuery.setParameter(EruptJpaUtils.L_VAL_KEY + paramKey, lParamValue);
+                        countQuery.setParameter(EruptJpaUtils.R_VAL_KEY + paramKey, rParamValue);
+                        query.setParameter(EruptJpaUtils.L_VAL_KEY + paramKey, lParamValue);
+                        query.setParameter(EruptJpaUtils.R_VAL_KEY + paramKey, rParamValue);
                         break;
                     case IN:
-                        List<Object> listIn = new ArrayList<>();
-                        for (Object o : (List<?>) condition.getValue()) {
-                            listIn.add(EruptUtil.convertObjectType(eruptFieldModel, o));
-                        }
-                        countQuery.setParameter(condition.getKey(), listIn);
-                        query.setParameter(condition.getKey(), listIn);
+
+                        countQuery.setParameter(paramKey, paramList);
+                        query.setParameter(paramKey, paramList);
+                        break;
+                    default:
+                        countQuery.setParameter(paramKey, paramList.get(0));
+                        query.setParameter(paramKey, paramList.get(0));
                         break;
                     }
                 }
@@ -94,12 +110,6 @@ public class EruptJpaDao {
             if (page.getTotal() > 0) {
                 List<T> objects = query.setMaxResults(page.getPageSize())
                         .setFirstResult((page.getPageIndex() - 1) * page.getPageSize()).getResultList();
-                //List<T> results = new ArrayList<T>();
-                //for (Object obj : objects) {
-                    
-                    ///results.add(EruptUtil.generateEruptDataMap(eruptModel, obj));
-                ///}
-
                 page.setList(objects);
             } else {
                 page.setList(new ArrayList<T>(0));

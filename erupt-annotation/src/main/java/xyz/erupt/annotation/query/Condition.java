@@ -1,11 +1,13 @@
 package xyz.erupt.annotation.query;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import xyz.erupt.annotation.config.QueryExpression;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class Condition {
 
     private String key;

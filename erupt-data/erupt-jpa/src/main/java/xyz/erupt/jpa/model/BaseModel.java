@@ -7,9 +7,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-
 import org.hibernate.annotations.GenericGenerator;
 
 import lombok.Getter;
@@ -23,7 +20,6 @@ import xyz.erupt.annotation.EruptField;
 @Getter
 @Setter
 @MappedSuperclass
-@JsonIdentityInfo(generator =ObjectIdGenerators.PropertyGenerator.class, property = "id" )
 public class BaseModel implements Serializable {
 
     @Id

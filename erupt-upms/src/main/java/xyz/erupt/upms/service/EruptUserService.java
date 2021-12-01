@@ -46,8 +46,8 @@ import xyz.erupt.upms.util.IpUtil;
  */
 @Service
 public class EruptUserService {
-
-    private ObjectMapper mapper = new ObjectMapper();
+    @Resource
+    private ObjectMapper mapper;
 
     @Resource
     private EruptSessionService sessionService;

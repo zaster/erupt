@@ -60,6 +60,8 @@ public class EruptFileController {
 
     private final EruptProp eruptProp;
 
+    private final ObjectMapper objectMapper ;
+
     private static final String FS_SEP = "/";
 
     @SneakyThrows
@@ -214,9 +216,9 @@ public class EruptFileController {
             Map<String, Object> map = uploadHtmlEditorImage(eruptName, fieldName, file);
             Boolean status = (Boolean) map.get("uploaded");
             map.put("state", status ? "SUCCESS" : "ERROR");
-            ObjectMapper mapper = new ObjectMapper();
             
-            response.getOutputStream().write(mapper.writeValueAsBytes(map));
+            
+            response.getOutputStream().write(objectMapper.writeValueAsBytes(map));
         }
 
     }

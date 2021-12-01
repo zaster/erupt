@@ -1,23 +1,25 @@
 package xyz.erupt.annotation;
 
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+
 import java.beans.Transient;
 import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.config.ToMap;
-import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.Edit;
+import xyz.erupt.annotation.sub_field.STColumn;
 
 /**
  * @author YuePeng
  * date 2018-09-28.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
+@Target({METHOD,FIELD})
 @Documented
 public @interface EruptField {
 

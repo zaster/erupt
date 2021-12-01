@@ -81,6 +81,8 @@ public class EruptDataController {
 
         private final EruptService eruptService;
 
+        private final ObjectMapper objectMapper;
+
         private final PreEruptDataService preEruptDataService;
 
 
@@ -135,7 +137,6 @@ public class EruptDataController {
                         @PathVariable("code") String code, @RequestBody JsonNode body) {
 
                
-                ObjectMapper mapper =new ObjectMapper();
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
                 
                 JsonNode paramobj = (!body.has("param")) ? body.get("param") : null;
@@ -163,7 +164,7 @@ public class EruptDataController {
                 // 表单形式参数
                 if (paramobj != null &&!paramobj.isNull()&& rowOperation.eruptMode() == EruptMode.FORM) {
                         try {
-                                param=mapper.treeToValue(paramobj, rowOperation.eruptClass());
+                                param=objectMapper.treeToValue(paramobj, rowOperation.eruptClass());
                         } catch (JsonProcessingException | IllegalArgumentException e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
@@ -384,12 +385,11 @@ public class EruptDataController {
         public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JsonNode data) {
                 EruptModel eruptModel = EruptCoreService.getErupt(erupt);
                 EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
-                ObjectMapper mapper = new ObjectMapper();
                 if (eruptApiModel.getStatus() == EruptApiModel.Status.SUCCESS) {
                         DataProxyInvoke.invoke(eruptModel, (dataProxy -> {
                                 try {
                                         dataProxy
-                                        .beforeAdd(mapper.treeToValue(data, eruptModel.getClazz()));
+                                        .beforeAdd(objectMapper.treeToValue(data, eruptModel.getClazz()));
                                 } catch (JsonProcessingException | IllegalArgumentException e) {
                                         // TODO Auto-generated catch block
                                         e.printStackTrace();

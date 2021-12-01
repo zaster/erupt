@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.DateSerializer;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -107,15 +107,6 @@ public class MvcConfig implements WebMvcConfigurer {
     public MappingJackson2HttpMessageConverter jackson2HttpMessageConverter() {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         ObjectMapper objectMapper = serializingObjectMapper();
-        // 序列化枚举值
-        objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, true);
-        //忽略value为null时key的输出
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        //序列化成json时，将所有的Long变成string，以解决js中的精度丢失。
-        SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
-        simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
-        objectMapper.registerModule(simpleModule);
         converter.setObjectMapper(objectMapper);
         return converter;
     }
@@ -123,16 +114,17 @@ public class MvcConfig implements WebMvcConfigurer {
     /**
      * jackson2 json序列化 null字段输出为空串
      */
-    private ObjectMapper serializingObjectMapper() {
+    @Bean("objectMapper")
+    public ObjectMapper serializingObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         //序列化日期格式
-        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer());
-        javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer());
-        javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer());
-        javaTimeModule.addSerializer(Date.class, new DateSerializer(false, simpleDateFormat));
+        //javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer());
+        ///javaTimeModule.addSerializer(LocalDate.class, new LocalDateSerializer());
+        //javaTimeModule.addSerializer(LocalTime.class, new LocalTimeSerializer());
+        ///javaTimeModule.addSerializer(Date.class, new DateSerializer(false, simpleDateFormat));
         //反序列化日期格式
         javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer());
         javaTimeModule.addDeserializer(LocalDate.class, new LocalDateDeserializer());
@@ -152,7 +144,16 @@ public class MvcConfig implements WebMvcConfigurer {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         objectMapper.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
-
+       
+        // 序列化枚举值
+        objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, true);
+        //忽略value为null时key的输出
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        //序列化成json时，将所有的Long变成string，以解决js中的精度丢失。
+        SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
+        simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
+        objectMapper.registerModule(simpleModule);
         return objectMapper;
     }
 

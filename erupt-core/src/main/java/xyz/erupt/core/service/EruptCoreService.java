@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -17,6 +18,8 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedCaseInsensitiveMap;
+import org.springframework.web.context.ContextLoader;
+import org.springframework.web.context.WebApplicationContext;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -45,9 +48,13 @@ import xyz.erupt.core.view.EruptModel;
 @Slf4j
 public class EruptCoreService implements ApplicationRunner {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static ObjectMapper objectMapper;
+    
     private static final Map<String, EruptModel> ERUPTS = new LinkedCaseInsensitiveMap<>();
-
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        EruptCoreService.objectMapper = objectMapper;
+    }
     public static  <TT>EruptModel getErupt(String eruptName) {
         return (EruptModel)ERUPTS.get(eruptName);
     }
@@ -56,6 +63,8 @@ public class EruptCoreService implements ApplicationRunner {
     @SneakyThrows
     public static <TT> EruptModel getEruptView(String eruptName) {
         EruptModel em = EruptCoreService.<TT>getErupt(eruptName).clone();
+        WebApplicationContext wac = ContextLoader.getCurrentWebApplicationContext();
+        log.info((wac==null)+"");
         for (EruptFieldModel fieldModel : em.getEruptFieldModels()) {
             Edit edit = fieldModel.getEruptField().edit();
             if (edit.type() == EditType.CHOICE) {
@@ -64,7 +73,7 @@ public class EruptCoreService implements ApplicationRunner {
                 fieldModel.setTagList(EruptUtil.getTagList(edit.tagsType()));
             }
             STColumn[] columns = fieldModel.getEruptField().columns();
-            ArrayNode jsonArray = mapper.createArrayNode();
+            ArrayNode jsonArray = objectMapper.createArrayNode();
             Arrays.stream(columns).forEach(column->{
                 
                 ObjectNode jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
@@ -72,7 +81,7 @@ public class EruptCoreService implements ApplicationRunner {
                     
                     String title = column.title();
                     String desc = column.desc();
-                    ObjectNode titleObject=mapper.createObjectNode();
+                    ObjectNode titleObject=objectMapper.createObjectNode();
                     titleObject.put("text", title);
                     titleObject.put("optionHelp", desc);
                     jsonObject.set("title", titleObject);

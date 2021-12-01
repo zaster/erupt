@@ -57,7 +57,7 @@ import xyz.erupt.core.view.TableQueryVo;
 @RequiredArgsConstructor
 public class EruptExcelController {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper objectMapper ;
 
     private final EruptProp eruptProp;
 
@@ -98,7 +98,7 @@ public class EruptExcelController {
         tableQueryVo.setPageIndex(1);
         tableQueryVo.setDataExport(true);
         if (null != condition) {
-            List<Condition> conditions = mapper.readValue(URLDecoder
+            List<Condition> conditions = objectMapper.readValue(URLDecoder
                     .decode(condition, StandardCharsets.UTF_8.name()), new ArrayList<Condition>().getClass());            
             tableQueryVo.setCondition(conditions);
         }

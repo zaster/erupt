@@ -1,13 +1,15 @@
 package xyz.erupt.core.view;
 
+import java.util.List;
+
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import xyz.erupt.annotation.query.Condition;
 
-import java.util.List;
-
 @Getter
 @Setter
+@NoArgsConstructor
 public class TableQueryVo {
 
     private static final int maxPageSize = 200;
@@ -23,7 +25,7 @@ public class TableQueryVo {
     private Object linkTreeVal;
 
     private List<Condition> condition;
-
+    
     public Integer getPageSize() {
         if (this.isDataExport()) {
             pageSize = Page.PAGE_MAX_DATA;
