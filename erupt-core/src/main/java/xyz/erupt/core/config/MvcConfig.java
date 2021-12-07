@@ -148,7 +148,7 @@ public class MvcConfig implements WebMvcConfigurer {
         // 序列化枚举值
         objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, true);
         //忽略value为null时key的输出
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         //序列化成json时，将所有的Long变成string，以解决js中的精度丢失。
         SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(Long.class, ToStringSerializer.instance);

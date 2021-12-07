@@ -14,6 +14,7 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -129,17 +130,18 @@ public class EruptDataController {
         }
 
         public static final String OPERATOR_PATH_STR = "/operator";
-
+        @SneakyThrows
         @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, @RequestBody JsonNode body) {
+                        @PathVariable("code") String code, @RequestBody ObjectNode body) {
 
                
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                
-                JsonNode paramobj = (!body.has("param")) ? body.get("param") : null;
+                log.info(""+body.get("param"));
+
+                JsonNode paramobj = body.get("param") ;
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
@@ -152,25 +154,13 @@ public class EruptDataController {
                         return EruptApiModel.errorApi("请为" + rowOperation.title() + "实现 OperationHandler 接口");
                 }
 
+                Object param = null;
                 if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
                         EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
-                        EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,
-                                        body.get("param"));
-                        if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
-                                return eruptApiModel;
-                }
-
-                Object param = null;
-                // 表单形式参数
-                if (paramobj != null &&!paramobj.isNull()&& rowOperation.eruptMode() == EruptMode.FORM) {
-                        try {
-                                param=objectMapper.treeToValue(paramobj, rowOperation.eruptClass());
-                        } catch (JsonProcessingException | IllegalArgumentException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                        }
-                     
-                } else {
+                        EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,paramobj);
+                        if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
+                        param=objectMapper.treeToValue(paramobj, rowOperation.eruptClass());
+                }  else {
                         param = paramobj;
                 }
                 // 表格形式参数
@@ -199,7 +189,6 @@ public class EruptDataController {
                                 || rowOperation.eruptMode() == RowOperation.EruptMode.TABLE)) {
                         return EruptApiModel.errorApi(i18NTranslateService.translate("执行该操作时请至少选中一条数据"));
                 }
-
                 operationHandler.exec(list, param, rowOperation.operationParam());
                 return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
 
@@ -298,7 +287,8 @@ public class EruptDataController {
         // REFERENCE API
         @PostMapping("/{erupt}/reference-table/{fieldName}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
-        public Page<?> getReferenceTable(@PathVariable("erupt") String eruptName,
+        public Page<?> getReferenceTable(
+                        @PathVariable("erupt") String eruptName,
                         @PathVariable("fieldName") String fieldName,
                         @RequestParam(value = "dependValue", required = false) Serializable dependValue,
                         @RequestParam(value = "tabRef", required = false) Boolean tabRef,
@@ -382,7 +372,7 @@ public class EruptDataController {
 
         @PostMapping("/validate-erupt/{erupt}")
         @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
-        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody JsonNode data) {
+        public EruptApiModel validateErupt(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data) {
                 EruptModel eruptModel = EruptCoreService.getErupt(erupt);
                 EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
                 if (eruptApiModel.getStatus() == EruptApiModel.Status.SUCCESS) {

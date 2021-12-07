@@ -99,7 +99,6 @@ public class EruptJpaUtils {
                                     .append(path.substring(path.lastIndexOf(".") + 1));
                             pathSet.add(path);
                         }
-
                     }
                 }
                 pathSet.clear();
@@ -140,11 +139,11 @@ public class EruptJpaUtils {
         }
         AnnotationUtil.switchFilterConditionToStr(eruptModel.getErupt().filter()).forEach(it -> {
             if (StringUtils.isNotBlank(it))
-                hql.append(AND).append(it);
+                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(),"")).append(it);
         });
         Optional.ofNullable(customCondition).ifPresent(it -> it.forEach(str -> {
             if (StringUtils.isNotBlank(str))
-                hql.append(EruptJpaUtils.AND).append(str);
+                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(),"")).append(str);
         }));
         return hql.toString();
     }

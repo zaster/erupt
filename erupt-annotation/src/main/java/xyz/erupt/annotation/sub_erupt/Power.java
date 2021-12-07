@@ -1,9 +1,9 @@
 package xyz.erupt.annotation.sub_erupt;
 
+import java.beans.Transient;
+
 import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.fun.PowerHandler;
-
-import java.beans.Transient;
 
 /**
  * @author YuePeng

@@ -18,8 +18,6 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedCaseInsensitiveMap;
-import org.springframework.web.context.ContextLoader;
-import org.springframework.web.context.WebApplicationContext;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -63,8 +61,7 @@ public class EruptCoreService implements ApplicationRunner {
     @SneakyThrows
     public static <TT> EruptModel getEruptView(String eruptName) {
         EruptModel em = EruptCoreService.<TT>getErupt(eruptName).clone();
-        WebApplicationContext wac = ContextLoader.getCurrentWebApplicationContext();
-        log.info((wac==null)+"");
+        log.info(eruptName);
         for (EruptFieldModel fieldModel : em.getEruptFieldModels()) {
             Edit edit = fieldModel.getEruptField().edit();
             if (edit.type() == EditType.CHOICE) {

@@ -19,8 +19,7 @@ import xyz.erupt.annotation.sub_erupt.Power;
 import xyz.erupt.annotation.sub_field.Edit;
 import xyz.erupt.annotation.sub_field.EditType;
 import xyz.erupt.annotation.sub_field.STColumn;
-import xyz.erupt.annotation.sub_field.STColumnLink;
-import xyz.erupt.annotation.sub_field.STColumnType;
+import xyz.erupt.annotation.sub_field.STColumn.STColumnType;
 import xyz.erupt.annotation.sub_field.sub_edit.CodeEditorType;
 import xyz.erupt.annotation.sub_field.sub_edit.DateType;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
@@ -71,7 +70,7 @@ public class EruptOperateLog extends BaseModel {
 
     @Column(length = 5000)
     @EruptField(
-            columns = @STColumn(title = "请求参数", type = STColumnType.LINK,link=@STColumnLink),
+            columns = @STColumn(title = "请求参数", type = STColumnType.LINK),
             edit = @Edit(title = "请求参数", type = EditType.CODE_EDITOR, codeEditType = @CodeEditorType(language = "json"))
     )
     private String reqParam;
@@ -85,7 +84,7 @@ public class EruptOperateLog extends BaseModel {
     @Lob
     @Type(type = "org.hibernate.type.TextType")
     @EruptField(
-            columns = @STColumn(title = "错误信息", type = STColumnType.LINK,link=@STColumnLink)
+            columns = @STColumn(title = "错误信息", type = STColumnType.LINK)
     )
     private String errorInfo;
 
@@ -103,7 +102,7 @@ public class EruptOperateLog extends BaseModel {
 
     @Column(length = 2083)
     @EruptField(
-            columns = @STColumn(title = "请求地址", type = STColumnType.LINK,link=@STColumnLink)
+            columns = @STColumn(title = "请求地址", type = STColumnType.LINK)
     )
     private String reqAddr;
 

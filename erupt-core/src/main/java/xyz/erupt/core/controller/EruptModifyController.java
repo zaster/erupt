@@ -60,12 +60,13 @@ public class EruptModifyController {
     @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody String datastring,
-                String datastring1, HttpServletRequest request) {
+    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data, @RequestBody ObjectNode data1, HttpServletRequest request) {
+        
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
-        ObjectNode data = objectMapper.readValue(datastring,ObjectNode.class);
-        ObjectNode jsonObject = StringUtils.isBlank(datastring1)?objectMapper.createObjectNode():objectMapper.readValue(datastring1, ObjectNode.class);
-        Object o = objectMapper.readValue(datastring,eruptModel.getClazz());
+        ObjectNode jsonObject = objectMapper.createObjectNode();
+        if (data1!=null&&!data1.isEmpty())
+            jsonObject = data1;
+        Object o = objectMapper.convertValue(data,eruptModel.getClazz());
         Erupts.powerLegal(eruptModel, PowerObject::isAdd);
         LinkTree dependTree = eruptModel.getErupt().linkTree();
         if (StringUtils.isNotBlank(dependTree.field()) && dependTree.dependNode()) {
@@ -107,15 +108,15 @@ public class EruptModifyController {
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.afterAdd(obj)));
         return EruptApiModel.successApi();
     }
+
     @SneakyThrows
     @PutMapping("/{erupt}")
     @EruptRecordOperate(value = "修改", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody  String datastring) throws IllegalAccessException {
+    public EruptApiModel editEruptData(@PathVariable("erupt") String erupt, @RequestBody  ObjectNode data) throws IllegalAccessException {
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
         Erupts.powerLegal(eruptModel, PowerObject::isEdit);
-        ObjectNode data = objectMapper.readValue(datastring,ObjectNode.class);
         EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(eruptModel, data);
         
         if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;

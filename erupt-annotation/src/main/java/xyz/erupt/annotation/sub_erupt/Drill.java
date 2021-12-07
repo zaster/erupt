@@ -19,6 +19,5 @@ public @interface Drill {
 
     @Comment("下钻目标配置")
     Link link();
-
     Power power() default @Power;
 }

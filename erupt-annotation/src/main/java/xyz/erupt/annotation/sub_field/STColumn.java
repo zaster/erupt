@@ -20,6 +20,8 @@ public @interface STColumn {
     
     @Comment("列显示类型")
     STColumnType type() default STColumnType.TEXT;
+
+    STColumnLink link() default @STColumnLink(viewType = ViewType.AUTO);
     
     @Comment("修饰类型为实体类对象时必须指定列名")
     String index() default "";
@@ -50,5 +52,23 @@ public @interface STColumn {
     BoolType bools() default @BoolType;
 	boolean show() default true;
 
-    STColumnLink link() default @STColumnLink;
+
+    enum STColumnType {
+    
+        TEXT(""),CHECKBOX , LINK , BADGE , TAG , RADIO , IMG , CURRENCY , NUMBER , DATE , YN , NO;
+        private final String value;
+        private STColumnType(){
+            this.value = this.name();
+        }
+        private STColumnType(String type) {
+            this.value = type;
+        }
+        public String getValue() {
+            return value.toLowerCase();
+        }
+        @Override
+        public String toString() {
+            return value.toLowerCase();
+        }
+    }
 }

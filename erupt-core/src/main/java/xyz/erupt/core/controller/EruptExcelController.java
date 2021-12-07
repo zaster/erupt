@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import xyz.erupt.annotation.fun.PowerObject;
 import xyz.erupt.annotation.query.Condition;
 import xyz.erupt.core.annotation.EruptRecordOperate;
@@ -55,6 +56,7 @@ import xyz.erupt.core.view.TableQueryVo;
 @RestController
 @RequestMapping(EruptRestPath.ERUPT_EXCEL)
 @RequiredArgsConstructor
+
 public class EruptExcelController {
 
     private final ObjectMapper objectMapper ;
@@ -109,6 +111,7 @@ public class EruptExcelController {
     }
 
     //导入
+    @SneakyThrows
     @PostMapping("/import/{erupt}")
     @EruptRecordOperate(value = "导入Excel", dynamicConfig = EruptOperateConfig.class)
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -135,7 +138,7 @@ public class EruptExcelController {
             throw new EruptWebApiRuntimeException("Excel解析异常，出错行数：" + i + "，原因：" + e.getMessage(), e);
         }
         for (int j = 0; j < list.size(); j++) {
-            EruptApiModel eruptApiModel = eruptModifyController.addEruptData(eruptName, list.get(j).toString(), null, request);
+            EruptApiModel eruptApiModel = eruptModifyController.addEruptData(eruptName, list.get(j), null, request);
             if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) {
                 throw new EruptWebApiRuntimeException("数据入库异常，出错行数：" + (j + 1) + "，原因：" + eruptApiModel.getMessage());
             }
