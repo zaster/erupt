@@ -56,7 +56,6 @@ public class EruptJpaDao {
             em.flush();
         });
     }
-
     public <T> Page<T> queryEruptList(EruptModel eruptModel, Page<T> page, EruptQuery eruptQuery) {
         String hql = EruptJpaUtils.generateEruptJpaHql(eruptModel, eruptModel.getEruptName(), eruptQuery, false);
         log.info(hql);
@@ -69,15 +68,22 @@ public class EruptJpaDao {
             
             if (null != eruptQuery.getConditions()) {
                 for (Condition condition : eruptQuery.getConditions()) {
-                    Field conditionField = ReflectUtil.findClassField(eruptModel.getClazz(), condition.getKey());
-                    log.info(condition.getValue().getClass().getName());
-                    String paramKey = condition.getKey().replace("\\.", "_");
+                    Field conditionField=null;
+                    try {
+                        conditionField = ReflectUtil.findFieldChain(condition.getKey(), eruptModel.getClazz());
+                    } catch (IllegalAccessException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    String paramKey = condition.getKey().replace(".", "_");
                     List<Object> paramList = new ArrayList<>();
                     Object paramValue = condition.getValue();
+                    log.info("paramValue:"+(paramValue==null));
+                    log.info("objectMapper:"+(objectMapper==null));
                     if (paramValue instanceof List) {
-                        ((List<?>)paramValue).forEach(p->{
+                        for (Object p :(List<?>)paramValue) {
                             paramList.add(objectMapper.convertValue(p, conditionField.getType()));
-                        });
+                        }
                     } else {
                         paramList.add(objectMapper.convertValue(paramValue, conditionField.getType()));
                     } 

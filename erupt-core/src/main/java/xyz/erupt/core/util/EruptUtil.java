@@ -134,18 +134,18 @@ public class EruptUtil {
         return choiceMap;
     }
 
-    public static ObjectNode getOptions(ChoiceType choiceType) {
+    public static ObjectNode getOptions(ChoiceType choiceType,String defaultColor) {
         final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->objectMapper.createObjectNode(), (json,vl)->{
             ObjectNode el = objectMapper.createObjectNode();
             el.put("text",vl.label());
-            el.put("color",StringUtils.isBlank(vl.color())?"default":vl.color());
+            el.put("color",StringUtils.isBlank(vl.color())?defaultColor:vl.color());
             json.set(vl.value(),el);
         }, (json,json1)->{});
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
             EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it->{
                 ObjectNode el = objectMapper.createObjectNode();
                 el.put("text",it.getLabel());
-                el.put("color",StringUtils.isBlank(it.getColor())?"default":it.getColor());
+                el.put("color",StringUtils.isBlank(it.getColor())?defaultColor:it.getColor());
                 jsonObject.set(it.getValue(),el);
             });;
             
@@ -154,7 +154,7 @@ public class EruptUtil {
     }
   
     public static List<VLModel> getChoiceList(ChoiceType choiceType) {
-        List<VLModel> vls = Stream.of(choiceType.vl()).map(vl -> new VLModel(vl.value(), vl.label(), "default",vl.desc(), vl.disable())).collect(Collectors.toList());
+        List<VLModel> vls = Stream.of(choiceType.vl()).map(vl -> new VLModel(vl.value(), vl.label(), StringUtils.isBlank(vl.color())?"":vl.color(),vl.desc(), vl.disable())).collect(Collectors.toList());
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(clazz -> {
             Optional.ofNullable(EruptSpringUtil.getBean(clazz).fetch(choiceType.fetchHandlerParams())).ifPresent(vls::addAll);
         });
@@ -207,6 +207,15 @@ public class EruptUtil {
         if (null != searchCondition) {
             for (Condition condition : searchCondition) {
                 EruptFieldModel eruptFieldModel = eruptModel.getEruptFieldMap().get(condition.getKey());
+                if (null != condition.getValue()) {
+                    if (condition.getValue() instanceof Collection) {
+                        Collection<?> collection = (Collection<?>) condition.getValue();
+                        if (collection.size() == 0) {
+                            continue;
+                        }
+                    }
+                    legalConditions.add(condition);
+                }
                 if (null != eruptFieldModel) {
                     Edit edit = eruptFieldModel.getEruptField().edit();
                     EditTypeSearch editTypeSearch = AnnotationUtil.getEditTypeSearch(edit.type());
@@ -320,7 +329,10 @@ public class EruptUtil {
                 boolean readonly = sceneEnum == SceneEnum.EDIT ? eruptField.edit().readonly().edit() : eruptField.edit().readonly().add();
                 if (StringUtils.isNotBlank(eruptField.edit().title()) && !readonly) {
                     try {
+                        
                         Object dataFieldValue = PropertyUtils.getProperty(data, field.getName());
+                        log.info(field.getName());
+                        log.info(dataFieldValue+"");
                         PropertyUtils.setProperty(target, field.getName(), dataFieldValue);
                          
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

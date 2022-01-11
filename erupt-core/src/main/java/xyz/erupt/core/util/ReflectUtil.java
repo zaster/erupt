@@ -9,10 +9,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * @author YuePeng
  * date 2018-11-07.
  */
+@Slf4j
 public class ReflectUtil {
 
     //递归查找类字段
@@ -46,7 +49,21 @@ public class ReflectUtil {
         }
         return obj;
     }
-
+    public static <T>Field findFieldChain(String fieldName, Class<?> clz)
+            throws IllegalAccessException {
+        String[] fields = fieldName.split("\\.");
+        Field f =null;
+        for (String field : fields) {
+            f = findClassField(clz, field);
+            if (f == null) {
+                throw new RuntimeException(clz.getName() + "." + fieldName + " not found");
+            }
+            if (null == (clz = f.getType())) {
+                return null;
+            }
+        }
+        return f;
+    }
     public static <T> void findClassAllFields(Class<T> clazz, Consumer<Field> fieldConsumer) {
         Class<?> tempClass = clazz;
         while (null != tempClass) {

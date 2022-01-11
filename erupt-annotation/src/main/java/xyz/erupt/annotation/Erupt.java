@@ -12,6 +12,7 @@ import xyz.erupt.annotation.config.Comment;
 import xyz.erupt.annotation.config.Match;
 import xyz.erupt.annotation.config.ToMap;
 import xyz.erupt.annotation.fun.DataProxy;
+import xyz.erupt.annotation.sub_erupt.Action;
 import xyz.erupt.annotation.sub_erupt.Drill;
 import xyz.erupt.annotation.sub_erupt.Filter;
 import xyz.erupt.annotation.sub_erupt.LinkTree;
@@ -51,7 +52,7 @@ public @interface Erupt {
     //    @ToMap(key = "code")
     @Comment("自定义功能按钮")
     RowOperation[] rowOperation() default {};
-
+    Action[] actions() default {};
 /*     Action[] actions() default {
         @Action(text = "新增",name = "add",rowMode = RowMode.NONE,contentMode = ContentMode.FORM ),
         @Action(text = "修改",name = "edit",rowMode = RowMode.SINGLE,contentMode = ContentMode.FORM),

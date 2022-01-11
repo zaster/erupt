@@ -55,17 +55,14 @@ import xyz.erupt.core.view.EruptModel;
 public class EruptModifyController {
     private final EruptService eruptService;
     private final ObjectMapper objectMapper;
-    @SneakyThrows
-    @PostMapping({"/{erupt}"})
-    @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
-    @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
     @Transactional
-    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data, @RequestBody ObjectNode data1, HttpServletRequest request) {
+    public EruptApiModel addEruptData(String erupt, ObjectNode data, ObjectNode data1, HttpServletRequest request) throws InstantiationException, IllegalAccessException {
         
         EruptModel eruptModel = EruptCoreService.getErupt(erupt);
-        ObjectNode jsonObject = objectMapper.createObjectNode();
+       ObjectNode jsonObject = objectMapper.createObjectNode();
         if (data1!=null&&!data1.isEmpty())
             jsonObject = data1;
+        //log.info(data1.toPrettyString());
         Object o = objectMapper.convertValue(data,eruptModel.getClazz());
         Erupts.powerLegal(eruptModel, PowerObject::isAdd);
         LinkTree dependTree = eruptModel.getErupt().linkTree();
@@ -107,6 +104,15 @@ public class EruptModifyController {
         this.modifyLog(eruptModel, "ADD", data.toString());
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.afterAdd(obj)));
         return EruptApiModel.successApi();
+    }
+    @SneakyThrows
+    @PostMapping({"/{erupt}"})
+    @EruptRecordOperate(value = "新增", dynamicConfig = EruptOperateConfig.class)
+    @EruptRouter(skipAuthIndex = 3, authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
+    @Transactional
+    public EruptApiModel addEruptData(@PathVariable("erupt") String erupt, @RequestBody ObjectNode data,  HttpServletRequest request) {
+        
+        return this.addEruptData(erupt, data, null,request);
     }
 
     @SneakyThrows

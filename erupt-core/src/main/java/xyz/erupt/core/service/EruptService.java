@@ -41,6 +41,7 @@ public class EruptService {
     public <TT>Page<TT> getEruptData(EruptModel eruptModel, TableQueryVo tableQueryVo, List<Condition> serverCondition, String... customCondition) {
         Erupts.powerLegal(eruptModel, PowerObject::isQuery);
         List<Condition> legalConditions = EruptUtil.geneEruptSearchCondition(eruptModel, tableQueryVo.getCondition());
+        
         List<String> conditionStrings = new ArrayList<>();
         //DependTree logic
         LinkTree dependTree = eruptModel.getErupt().linkTree();
@@ -55,6 +56,7 @@ public class EruptService {
         conditionStrings.addAll(Arrays.asList(customCondition));
         DataProxyInvoke.invoke(eruptModel, (dataProxy -> Optional.ofNullable(dataProxy.beforeFetch(legalConditions)).ifPresent(conditionStrings::add)));
         Optional.ofNullable(serverCondition).ifPresent(legalConditions::addAll);
+        Optional.ofNullable(tableQueryVo.getRelation()).ifPresent(legalConditions::addAll);
         Page<TT> page = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
                 .queryList(eruptModel, new Page<TT>(tableQueryVo.getPageIndex(), tableQueryVo.getPageSize(), tableQueryVo.getSort()),
                         EruptQuery.builder().orderBy(tableQueryVo.getSort()).conditionStrings(conditionStrings).conditions(legalConditions).build());

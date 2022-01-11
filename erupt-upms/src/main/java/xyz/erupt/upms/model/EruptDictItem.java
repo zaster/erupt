@@ -13,7 +13,9 @@ import xyz.erupt.annotation.EruptField;
 import xyz.erupt.annotation.EruptI18n;
 import xyz.erupt.annotation.sub_erupt.Power;
 import xyz.erupt.annotation.sub_field.Edit;
+import xyz.erupt.annotation.sub_field.EditType;
 import xyz.erupt.annotation.sub_field.STColumn;
+import xyz.erupt.annotation.sub_field.sub_edit.InputType;
 import xyz.erupt.annotation.sub_field.sub_edit.Search;
 import xyz.erupt.upms.model.base.HyperModel;
 
@@ -45,6 +47,12 @@ public class EruptDictItem extends HyperModel {
             edit = @Edit(title = "名称", notNull = true, search = @Search(vague = true))
     )
     private String name;
+
+    @EruptField(
+        columns = @STColumn(title = "颜色"),
+        edit = @Edit(title = "颜色", type = EditType.INPUT, inputType = @InputType(type = "color"))
+)
+private String color="black";
 
     @EruptField(
             columns = @STColumn(title = "显示顺序", sort = true),

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,9 +34,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import xyz.erupt.annotation.constant.AnnotationConst;
+import xyz.erupt.annotation.fun.ActionHandler;
 import xyz.erupt.annotation.fun.OperationHandler;
 import xyz.erupt.annotation.fun.PowerObject;
 import xyz.erupt.annotation.query.Condition;
+import xyz.erupt.annotation.sub_erupt.Action;
+import xyz.erupt.annotation.sub_erupt.ModalButton;
 import xyz.erupt.annotation.sub_erupt.RowOperation;
 import xyz.erupt.annotation.sub_erupt.RowOperation.EruptMode;
 import xyz.erupt.annotation.sub_erupt.Tree;
@@ -51,6 +55,7 @@ import xyz.erupt.core.exception.EruptWebApiRuntimeException;
 import xyz.erupt.core.invoke.DataProcessorManager;
 import xyz.erupt.core.invoke.DataProxyInvoke;
 import xyz.erupt.core.invoke.ExprInvoke;
+import xyz.erupt.core.naming.EruptActionConfig;
 import xyz.erupt.core.naming.EruptRowOperationConfig;
 import xyz.erupt.core.query.Column;
 import xyz.erupt.core.query.EruptQuery;
@@ -130,6 +135,10 @@ public class EruptDataController {
         }
 
         public static final String OPERATOR_PATH_STR = "/operator";
+
+        public static final String ACTION_PATH = "/action/";
+
+        public static final String SUB_ACTION_PATH="/subaction/";
         @SneakyThrows
         @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -193,7 +202,118 @@ public class EruptDataController {
                 return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
 
         }
+        @SneakyThrows
+        @PostMapping("/{erupt}"+ACTION_PATH+"{code}"+SUB_ACTION_PATH+"{subcode}")
+        @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
+        @EruptRecordOperate(value = "", dynamicConfig = EruptActionConfig.class)
+        public EruptApiModel executeAction(@PathVariable("erupt") String eruptName,
+                        @PathVariable("code") String code,@PathVariable("subcode") String subcode,
+                        @RequestBody ObjectNode body) {
 
+               
+                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ModalButton button = Arrays.stream(action.buttons()).filter(it->subcode.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ActionHandler<Object,Object,Object> handler = EruptSpringUtil.getBean(button.handler());
+
+                JsonNode paramobj = body.get("param") ;
+                JsonNode dependency = paramobj.get("dependency");
+                JsonNode content = paramobj.get("content");
+                String dependErupt = dependency.get("eruptName").asText();
+                String contentErupt = content.get("eruptName").asText();
+                List<Object> dependFromList = dependency.hasNonNull("from")?this.getListFromEruptIds(dependency.get("from").get("ids"), EruptCoreService.getErupt(dependency.get("from").get("eruptName").asText())):null;
+                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"), EruptCoreService.getErupt(dependErupt));
+                List<Object> contentList = this.getListFromEruptIds(content.get("ids"), EruptCoreService.getErupt(contentErupt));
+                Object contentFormValue = this.convertObject(content.get("formValue"), action.contentErupt());
+
+                if (!ExprInvoke.getExpr(action.show())||!ExprInvoke.getExpr(button.show())) {
+                        throw new EruptNoLegalPowerException();
+                }
+                if (button.handler().isInterface()) {
+                        return EruptApiModel.errorApi("请为" + action.text()+button.label() + "实现 OperationHandler 接口");
+                }
+                handler.exec(dependFromList,dependList,contentList,contentFormValue,button.param());
+                return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
+
+        }
+        @PostMapping("/{erupt}" + ACTION_PATH + "{code}/importx/{subcode}")
+        @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
+        @EruptRecordOperate(value = "", dynamicConfig = EruptActionConfig.class)
+        @SneakyThrows
+        public EruptApiModel executeActionImport(@PathVariable("erupt") String eruptName,
+                        @PathVariable("code") String code, 
+                        @RequestPart("file") MultipartFile file, 
+                        @RequestPart("param") ObjectNode body) {
+
+                EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
+                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ModalButton button = Arrays.stream(action.buttons()).findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ActionHandler<Object,Object,Object> operationHandler = EruptSpringUtil.getBean(button.handler());
+
+
+                if (!ExprInvoke.getExpr(button.show())) {
+                        throw new EruptNoLegalPowerException();
+                }
+                if (button.handler().isInterface()) {
+                        return EruptApiModel.errorApi("请为" + action.text() + "实现 OperationHandler 接口");
+                }
+                if (file.isEmpty()) {
+                        return EruptApiModel.errorApi("上传失败，请选择文件");
+                }
+                
+                JsonNode paramobj = body.get("param") ;
+                JsonNode dependency = paramobj.get("dependency");
+                JsonNode content = paramobj.get("content");
+                String dependErupt = dependency.get("eruptName").asText();
+                String contentErupt = content.get("eruptName").asText();
+                List<Object> dependFromList = dependency.hasNonNull("from")?this.getListFromEruptIds(dependency.get("from").get("ids"), EruptCoreService.getErupt(dependency.get("from").get("eruptName").asText())):null;
+                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"), EruptCoreService.getErupt(dependErupt));
+                List<Object> contentList = this.getListFromEruptIds(content.get("ids"), EruptCoreService.getErupt(contentErupt));
+                // Object contentFormValue = this.convertObject(content.get("formValue"), action.contentErupt());
+
+                if (!ExprInvoke.getExpr(action.show())||!ExprInvoke.getExpr(button.show())) {
+                        throw new EruptNoLegalPowerException();
+                }
+                if (button.handler().isInterface()) {
+                        return EruptApiModel.errorApi("请为" + action.text()+button.label() + "实现 OperationHandler 接口");
+                }
+                String fileName = file.getOriginalFilename();
+                Map<String, Object> map = new HashMap<String, Object>();
+                
+                try {
+                        if (fileName.endsWith(EruptExcelService.XLS_FORMAT)) {
+                                map.put("file", new HSSFWorkbook(file.getInputStream()));
+                        } else if (fileName.endsWith(EruptExcelService.XLSX_FORMAT)) {
+                                map.put("file", new XSSFWorkbook(file.getInputStream()));
+
+                        } else {
+                                throw new EruptWebApiRuntimeException("上传文件格式必须为Excel");
+                        }
+
+                } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                }
+               operationHandler.exec( dependFromList, dependList,contentList,map,button.param());
+
+                return EruptApiModel.successApi();
+
+        }
+        private List<Object> getListFromEruptIds(JsonNode ids,EruptModel eruptModel) {
+                List<Object> list = new ArrayList<>();
+                if (ids.isArray() && ids.size() > 0) {
+
+                        for (JsonNode id : ids) {
+                            Object obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz()).findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id.asText()));
+                            list.add(obj);
+                        }
+                }
+                return list;
+        }
+
+        private Object convertObject(JsonNode node ,Class<?>clz) throws JsonProcessingException, IllegalArgumentException {
+                return objectMapper.treeToValue(node, clz);
+        }
         @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/importx/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)

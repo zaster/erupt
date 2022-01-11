@@ -30,4 +30,6 @@ public @interface Power {
     @Transient
     @Comment("动态处理Power权限")
     Class<? extends PowerHandler> powerHandler() default PowerHandler.class;
+
+    String ifExpr() default "";
 }

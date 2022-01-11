@@ -115,7 +115,7 @@ public class EruptJpaUtils {
         if (null != conditions) {
             for (Condition condition : conditions) {
                 String _key = EruptJpaUtils.completeHqlPath(eruptModel.getEruptName(), condition.getKey());
-                String paramKey = condition.getKey().replace("\\.", "_");
+                String paramKey = condition.getKey().replace(".", "_");
                 switch (condition.getExpression()) {
 
                     case LIKE:

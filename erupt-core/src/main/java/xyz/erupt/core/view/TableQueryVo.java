@@ -25,6 +25,8 @@ public class TableQueryVo {
     private Object linkTreeVal;
 
     private List<Condition> condition;
+
+    private List<Condition> relation;
     
     public Integer getPageSize() {
         if (this.isDataExport()) {

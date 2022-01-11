@@ -26,6 +26,8 @@ public class PowerObject {
 
     private boolean importable;
 
+    private String ifExpr;
+
     public PowerObject(Power power) {
         this.add = power.add();
         this.delete = power.delete();
@@ -34,5 +36,7 @@ public class PowerObject {
         this.viewDetails = power.viewDetails();
         this.export = power.export();
         this.importable = power.importable();
+        this.ifExpr = power.ifExpr();
+        
     }
 }

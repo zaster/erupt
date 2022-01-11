@@ -1,51 +1,76 @@
 package xyz.erupt.annotation.sub_erupt;
 
+import java.beans.Transient;
+
+import xyz.erupt.annotation.config.AutoFill;
 import xyz.erupt.annotation.config.Comment;
-import xyz.erupt.annotation.sub_field.STIcon;
+import xyz.erupt.annotation.expr.ExprBool;
 
 public @interface Action {
+    @Deprecated
+    @AutoFill("T(Integer).toString(#item.text().hashCode())")
+    String code() default "";
     String name() default "";
     String text() default "";
     String tooltip() default "";
-    STIcon icon() default @STIcon;
+    String icon() default "";
     String ifExpr() default "";
+
+    Relation[] relations() default @Relation;
+
+    @Transient
+    ExprBool show() default @ExprBool;
     String pop() default "";
     String iifBehavior() default "hide";
+    
     @Comment("操作的类型，默认为模态框")
-    STColumnButtonType type() default STColumnButtonType.MODEL;
-    @Comment("模态框组件类型")
-    ContentMode contentMode() default ContentMode.TABLE;
+    STColumnButtonType type() default STColumnButtonType.LINK;
 
-    FormMode formMode() default FormMode.ADD;
     @Comment("按钮依赖本表数据模式")
     RowMode rowMode() default RowMode.SINGLE;
-
-    @Comment("模态框中表格的选择模式")
-    SelectMode contentSelectMode() default SelectMode.CHECKBOX;
-    @Comment("模态框中的数据对象类型")
-    Class<?> contentClass() default Void.class;
-
-    String method() default "";
-
+    @Comment("对象类型")
+    Class<?> contentErupt() default void.class;
+    @Comment("组件类型")
+    ContentType contentType() default ContentType.TABLE;
+    @Comment("表格的选择模式")
+    SelectMode selectMode() default SelectMode.CHECKBOX;
+    FormMode formMode() default FormMode.EDIT;
+    ModalButton[] buttons() default{};
     Tpl tpl() default @Tpl(path = "");
-
-    enum ContentMode {
+    enum ContentType {
         FORM,
         TABLE,
         IMPORT,
-        TPL
+        TPL,
+        NONE;
+        private final String value;
+        private ContentType(){
+            this.value = this.name();
+        }
+        private ContentType(String type) {
+            this.value = type;
+        }
+        public String getValue() {
+            return value.toLowerCase();
+        }
+        @Override
+        public String toString() {
+            return value.toLowerCase();
+        }
     }
     enum FormMode{
         ADD,EDIT
     }
+
+    enum SelectMode {
+        RADIO,
+        CHECKBOX
+    }
+    
     enum RowMode {
         SINGLE,
         MULTI,
         NONE
-    }
-    enum SelectMode {
-        RADIO,
-        CHECKBOX
     }
     enum STColumnButtonType {
         NONE,DEL, LINK , MODEL , STATIC , DRAWER;

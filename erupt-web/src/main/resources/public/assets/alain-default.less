@@ -25774,10 +25774,6 @@ g2-tag-cloud {
   left: 3px;
 }
 
-//page-header .page-header {
-//  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2)
-//}
-
 .hidden {
   display: none !important
 }
@@ -25792,7 +25788,7 @@ g2-tag-cloud {
 
 .modal-xxl .ant-modal {
   width: auto !important;
-  max-width: 85% !important;
+  max-width: 90% !important;
 }
 
 .ant-table {
@@ -25867,26 +25863,20 @@ reuse-tab ~ app-tpl .page-container {
     top: 40px;
   }
 }
-
-//::-webkit-scrollbar {
-//  width: 6px;
-//  height: 7px;
-//  background-color: rgba(0, 0, 0, 0);
-//  -ms-overflow-style: -ms-autohiding-scrollbar;
-//}
-//
-//::-webkit-scrollbar-thumb {
-//  border-radius: 5px;
-//  background-color: #ddd;
-//}
-//
-//
-//::-webkit-scrollbar-track {
-//  border-radius: 0;
-//  background-color: rgba(0, 0, 0, 0);
-//}
-
-//iframe page-container style end
+::-webkit-scrollbar{
+    width: 5px;
+    height: 5px;
+}
+  
+::-webkit-scrollbar-thumb{
+    border-radius: 1em;
+    background-color: rgba(50,50,50,.3);
+}
+  
+::-webkit-scrollbar-track{
+    border-radius: 1em;
+    background-color: rgba(50,50,50,.1);
+}
 
 span.ripple {
   position: absolute;

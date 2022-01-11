@@ -59,6 +59,11 @@ public class EruptBuildController {
             eruptBuildModel.setOperationErupts(Optional.ofNullable(eruptBuildModel.getOperationErupts()).orElse(new LinkedHashMap<>()));
             eruptBuildModel.getOperationErupts().put(operation.code(), EruptCoreService.getEruptView(operation.eruptClass().getSimpleName()));
         });
+        Arrays.stream(eruptBuildModel.getEruptModel().getErupt().actions()).filter(action ->
+                action.contentErupt() != void.class && !action.contentErupt().getSimpleName().equals(eruptBuildModel.getEruptModel().getEruptName())).forEach(action -> {
+            eruptBuildModel.setActionErupts(Optional.ofNullable(eruptBuildModel.getActionErupts()).orElse(new LinkedHashMap<>()));
+            eruptBuildModel.getActionErupts().put(action.code(), getEruptBuild(action.contentErupt().getSimpleName()));
+        });
         return eruptBuildModel;
     }
 

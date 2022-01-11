@@ -86,14 +86,14 @@ public class EruptCoreService implements ApplicationRunner {
                 switch(column.type()) {
                     case BADGE:
                         
-                        jsonObject.set("badge", EruptUtil.getOptions(column.choices()));
+                        jsonObject.set("badge", EruptUtil.getOptions(column.choices(),"default"));
                         break;
                     case YN:
                         jsonObject.put("type", "tag");
                         jsonObject.set("tag", EruptUtil.getYn(column.bools()));
                         break;
                     case TAG:
-                        jsonObject.set("tag", EruptUtil.getOptions(column.choices()));
+                        jsonObject.set("tag", EruptUtil.getOptions(column.choices(),""));
                         break;
                 }
                 

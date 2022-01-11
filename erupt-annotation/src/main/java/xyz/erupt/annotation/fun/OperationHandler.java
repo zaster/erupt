@@ -1,8 +1,8 @@
 package xyz.erupt.annotation.fun;
 
-import xyz.erupt.annotation.config.Comment;
-
 import java.util.List;
+
+import xyz.erupt.annotation.config.Comment;
 
 /**
  * @author YuePeng
