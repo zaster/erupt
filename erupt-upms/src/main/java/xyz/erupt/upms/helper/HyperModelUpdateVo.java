@@ -25,11 +25,12 @@ import xyz.erupt.annotation.sub_field.STColumn;
 import xyz.erupt.annotation.sub_field.sub_edit.DateType;
 import xyz.erupt.jpa.model.BaseModel;
 import xyz.erupt.upms.model.EruptUserVo;
+import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 
 /**
  * @author YuePeng
- * date 2021/3/15 10:23
+ *         date 2021/3/15 10:23
  */
 @Getter
 @Setter
@@ -45,17 +46,11 @@ public class HyperModelUpdateVo extends BaseModel {
     @SkipSerialize
     private Date createTime;
 
-    @EruptField(
-            columns = @STColumn(title = "更新时间", sort = true),
-            edit = @Edit(title = "更新时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME))
-    )
+    @EruptField(columns = @STColumn(title = "更新时间", sort = true), edit = @Edit(title = "更新时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME)))
     private Date updateTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @EruptField(
-            columns = @STColumn(title = "更新人", width = "100px", index = "name"),
-            edit = @Edit(title = "更新人", readonly = @Readonly, type = EditType.REFERENCE_TABLE)
-    )
+    @EruptField(columns = @STColumn(title = "更新人", width = "100px", index = "name"), edit = @Edit(title = "更新人", readonly = @Readonly, type = EditType.REFERENCE_TABLE))
     private EruptUserVo updateUser;
 
     @Service
@@ -63,19 +58,22 @@ public class HyperModelUpdateVo extends BaseModel {
         @Transient
         @Resource
         private EruptUserService eruptUserService;
+        @Transient
+        @Resource
+        private EruptSessionService sessionService;
 
         @Override
         public void beforeAdd(HyperModelUpdateVo hyperModel) {
             hyperModel.setCreateTime(new Date());
-            hyperModel.setCreateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+            hyperModel.setCreateUser(new EruptUserVo(sessionService.getCurrentUid()));
             hyperModel.setUpdateTime(new Date());
-            hyperModel.setUpdateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+            hyperModel.setUpdateUser(new EruptUserVo(sessionService.getCurrentUid()));
         }
 
         @Override
         public void beforeUpdate(HyperModelUpdateVo hyperModel) {
             hyperModel.setUpdateTime(new Date());
-            hyperModel.setUpdateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+            hyperModel.setUpdateUser(new EruptUserVo(sessionService.getCurrentUid()));
         }
     }
 }

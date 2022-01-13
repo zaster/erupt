@@ -32,6 +32,7 @@ import xyz.erupt.upms.constant.SessionKey;
 import xyz.erupt.upms.fun.LoginProxy;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.service.EruptContextService;
+import xyz.erupt.upms.service.EruptMenuService;
 import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 import xyz.erupt.upms.util.IpUtil;
@@ -39,7 +40,7 @@ import xyz.erupt.upms.vo.EruptMenuVo;
 
 /**
  * @author YuePeng
- * date 2018-12-13.
+ *         date 2018-12-13.
  */
 @RestController
 @RequestMapping(EruptRestPath.ERUPT_API)
@@ -47,7 +48,8 @@ public class EruptUserController {
 
     @Resource
     private EruptUserService eruptUserService;
-
+    @Resource
+    private EruptMenuService eruptMenuService;
     @Resource
     private EruptSessionService sessionService;
 
@@ -60,12 +62,12 @@ public class EruptUserController {
     @Resource
     private EruptContextService eruptContextService;
 
-    //登录
+    // 登录
     @SneakyThrows
     @PostMapping("/login")
     public LoginModel login(@RequestParam("account") String account,
-                            @RequestParam("pwd") String pwd,
-                            @RequestParam(name = "verifyCode", required = false) String verifyCode) {
+            @RequestParam("pwd") String pwd,
+            @RequestParam(name = "verifyCode", required = false) String verifyCode) {
         if (!eruptUserService.checkVerifyCode(verifyCode)) {
             LoginModel loginModel = new LoginModel();
             loginModel.setUseVerifyCode(true);
@@ -95,30 +97,32 @@ public class EruptUserController {
             EruptUser eruptUser = loginModel.getEruptUser();
             loginModel.setToken(RandomStringUtils.random(16, true, true));
             loginModel.setExpire(this.eruptUserService.getExpireTime());
-            sessionService.put(SessionKey.USER_TOKEN + loginModel.getToken(), loginModel.getEruptUser().getId().toString(), eruptUpmsConfig.getExpireTimeByLogin());
+            sessionService.put(SessionKey.USER_TOKEN + loginModel.getToken(),
+                    loginModel.getEruptUser().getId().toString(), eruptUpmsConfig.getExpireTimeByLogin());
             Optional.ofNullable(loginProxy).ifPresent(it -> it.loginSuccess(eruptUser, loginModel.getToken()));
-            eruptUserService.cacheUserInfo(eruptUser, loginModel.getToken());
-            eruptUserService.saveLoginLog(eruptUser, loginModel.getToken()); //记录登录日志
+            sessionService.cacheUserInfo(eruptUser, eruptMenuService.getUserAllMenu(eruptUser), loginModel.getToken());
+            eruptUserService.saveLoginLog(eruptUser, loginModel.getToken()); // 记录登录日志
         }
         return loginModel;
     }
 
-    //获取菜单
+    // 获取菜单
     @GetMapping("/menu")
     @EruptRouter(verifyType = EruptRouter.VerifyType.LOGIN, authIndex = 0)
     public List<EruptMenuVo> getMenu() {
         try {
-            return sessionService.get(SessionKey.MENU_VIEW + eruptContextService.getCurrentToken(), new TypeReference<List<EruptMenuVo>>() {
-            });
+            return sessionService.get(SessionKey.MENU_VIEW + eruptContextService.getCurrentToken(),
+                    new TypeReference<List<EruptMenuVo>>() {
+                    });
         } catch (JsonProcessingException e) {
             // TODO Auto-generated catch block
-            
+
             e.printStackTrace();
             return new ArrayList<>();
         }
     }
 
-    //登出
+    // 登出
     @PostMapping("/logout")
     @EruptRouter(verifyType = EruptRouter.VerifyType.LOGIN, authIndex = 0)
     public EruptApiModel logout() {
@@ -136,9 +140,9 @@ public class EruptUserController {
     @PostMapping("/change-pwd")
     @EruptRouter(verifyType = EruptRouter.VerifyType.LOGIN, authIndex = 0)
     public EruptApiModel changePwd(@RequestParam("account") String account,
-                                   @RequestParam("pwd") String pwd,
-                                   @RequestParam("newPwd") String newPwd,
-                                   @RequestParam("newPwd2") String newPwd2) {
+            @RequestParam("pwd") String pwd,
+            @RequestParam("newPwd") String newPwd,
+            @RequestParam("newPwd2") String newPwd2) {
         return eruptUserService.changePwd(account, pwd, newPwd, newPwd2);
     }
 

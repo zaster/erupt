@@ -21,7 +21,7 @@ import xyz.erupt.upms.service.EruptSessionService;
  * 全局菜单权限控制
  *
  * @author YuePeng
- * date 2021/3/16 00:15
+ *         date 2021/3/16 00:15
  */
 @Service
 public class UpmsPowerHandler implements PowerHandler {
@@ -39,7 +39,7 @@ public class UpmsPowerHandler implements PowerHandler {
     @Override
     public void handler(PowerObject power) {
         try {
-            Optional.ofNullable(eruptContextService.getCurrentEruptMenu()).ifPresent(eruptMenu -> {
+            Optional.ofNullable(eruptSessionService.getCurrentEruptMenu()).ifPresent(eruptMenu -> {
                 this.powerOff(eruptMenu.getPowerOff(), power);
                 Optional.of(eruptSessionService.get(SessionKey.ROLE_POWER + eruptContextService.getCurrentToken()))
                         .ifPresent(it -> this.powerOff(it.toString(), power));

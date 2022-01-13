@@ -37,7 +37,7 @@ import xyz.erupt.upms.util.IpUtil;
 
 /**
  * @author YuePeng
- * date 2019-12-05.
+ *         date 2019-12-05.
  */
 @Service
 public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
@@ -59,7 +59,8 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
     private EruptSessionService sessionService;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws IOException {
         EruptRouter eruptRouter = null;
         if (handler instanceof HandlerMethod) {
             eruptRouter = ((HandlerMethod) handler).getMethodAnnotation(EruptRouter.class);
@@ -97,7 +98,7 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
             return false;
         }
 
-        //权限校验
+        // 权限校验
         String authStr = request.getServletPath().split("/")[eruptRouter.skipAuthIndex() + eruptRouter.authIndex()];
         switch (eruptRouter.verifyType()) {
             case LOGIN:
@@ -111,8 +112,7 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
                 break;
             case ERUPT:
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                $ep:
-                if (StringUtils.isNotBlank(parentEruptName)) {
+                $ep: if (StringUtils.isNotBlank(parentEruptName)) {
                     EruptModel eruptParentModel = EruptCoreService.getErupt(parentEruptName);
                     for (EruptFieldModel model : eruptParentModel.getEruptFieldModels()) {
                         if (eruptModel.getEruptName().equals(model.getFieldReturnName())) {
@@ -151,38 +151,45 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
 
     @Override
     @Transactional
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
+            Exception ex) {
         if (eruptSecurityProp.isRecordOperateLog()) {
             if (handler instanceof HandlerMethod) {
                 HandlerMethod handlerMethod = (HandlerMethod) handler;
-                Optional.ofNullable(handlerMethod.getMethodAnnotation(EruptRecordOperate.class)).ifPresent(eruptRecordOperate -> {
-                    EruptOperateLog operate = new EruptOperateLog();
-                    if (eruptRecordOperate.dynamicConfig().isInterface()) {
-                        operate.setApiName(eruptRecordOperate.value());
-                    } else {
-                        String eruptName = request.getHeader(EruptReqHeaderConst.ERUPT_HEADER_KEY);
-                        eruptName = Optional.ofNullable(eruptName).orElse(request.getParameter(EruptReqHeaderConst.URL_ERUPT_PARAM_KEY));
-                        EruptRecordOperate.DynamicConfig dynamicConfig = EruptSpringUtil.getBean(eruptRecordOperate.dynamicConfig());
-                        if (!dynamicConfig.canRecord(eruptName, handlerMethod.getMethod())) return;
-                        operate.setApiName(dynamicConfig.naming(eruptRecordOperate.value(), eruptName, handlerMethod.getMethod()));
-                    }
-                    operate.setIp(IpUtil.getIpAddr(request));
-                    operate.setRegion(IpUtil.getCityInfo(operate.getIp()));
-                    operate.setStatus(true);
-                    operate.setReqMethod(request.getMethod());
-                    operate.setReqAddr(request.getRequestURL().toString());
-                    Optional.ofNullable(eruptUserService.getCurrentUid()).ifPresent(it -> operate.setEruptUser(new EruptUserVo(it)));
-                    operate.setCreateTime(new Date());
-                    operate.setTotalTime(operate.getCreateTime().getTime() - RequestBodyTL.get().getDate());
-                    Optional.ofNullable(ex).ifPresent(e -> {
-                        operate.setErrorInfo(ExceptionUtils.getStackTrace(e));
-                        operate.setStatus(false);
-                    });
-                    Object param = RequestBodyTL.get().getBody();
-                    operate.setReqParam(null == param ? findRequestParamVal(request) : param.toString());
-                    RequestBodyTL.remove();
-                    entityManager.persist(operate);
-                });
+                Optional.ofNullable(handlerMethod.getMethodAnnotation(EruptRecordOperate.class))
+                        .ifPresent(eruptRecordOperate -> {
+                            EruptOperateLog operate = new EruptOperateLog();
+                            if (eruptRecordOperate.dynamicConfig().isInterface()) {
+                                operate.setApiName(eruptRecordOperate.value());
+                            } else {
+                                String eruptName = request.getHeader(EruptReqHeaderConst.ERUPT_HEADER_KEY);
+                                eruptName = Optional.ofNullable(eruptName)
+                                        .orElse(request.getParameter(EruptReqHeaderConst.URL_ERUPT_PARAM_KEY));
+                                EruptRecordOperate.DynamicConfig dynamicConfig = EruptSpringUtil
+                                        .getBean(eruptRecordOperate.dynamicConfig());
+                                if (!dynamicConfig.canRecord(eruptName, handlerMethod.getMethod()))
+                                    return;
+                                operate.setApiName(dynamicConfig.naming(eruptRecordOperate.value(), eruptName,
+                                        handlerMethod.getMethod()));
+                            }
+                            operate.setIp(IpUtil.getIpAddr(request));
+                            operate.setRegion(IpUtil.getCityInfo(operate.getIp()));
+                            operate.setStatus(true);
+                            operate.setReqMethod(request.getMethod());
+                            operate.setReqAddr(request.getRequestURL().toString());
+                            Optional.ofNullable(sessionService.getCurrentUid())
+                                    .ifPresent(it -> operate.setEruptUser(new EruptUserVo(it)));
+                            operate.setCreateTime(new Date());
+                            operate.setTotalTime(operate.getCreateTime().getTime() - RequestBodyTL.get().getDate());
+                            Optional.ofNullable(ex).ifPresent(e -> {
+                                operate.setErrorInfo(ExceptionUtils.getStackTrace(e));
+                                operate.setStatus(false);
+                            });
+                            Object param = RequestBodyTL.get().getBody();
+                            operate.setReqParam(null == param ? findRequestParamVal(request) : param.toString());
+                            RequestBodyTL.remove();
+                            entityManager.persist(operate);
+                        });
             }
         }
     }
@@ -190,7 +197,8 @@ public class EruptSecurityInterceptor implements AsyncHandlerInterceptor {
     public String findRequestParamVal(HttpServletRequest request) {
         if (request.getParameterMap().size() > 0) {
             StringBuilder sb = new StringBuilder();
-            request.getParameterMap().forEach((key, value) -> sb.append(key).append("=").append(Arrays.toString(value)).append("\n"));
+            request.getParameterMap()
+                    .forEach((key, value) -> sb.append(key).append("=").append(Arrays.toString(value)).append("\n"));
             return sb.toString();
         }
         return null;

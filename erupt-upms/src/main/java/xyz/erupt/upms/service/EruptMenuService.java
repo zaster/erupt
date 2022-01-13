@@ -1,6 +1,5 @@
 package xyz.erupt.upms.service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -22,11 +21,10 @@ import xyz.erupt.upms.enums.MenuStatus;
 import xyz.erupt.upms.model.EruptMenu;
 import xyz.erupt.upms.model.EruptRole;
 import xyz.erupt.upms.model.EruptUser;
-import xyz.erupt.upms.vo.EruptMenuVo;
 
 /**
  * @author YuePeng
- * date 2020-04-13
+ *         date 2020-04-13
  */
 @Service
 public class EruptMenuService implements DataProxy<EruptMenu> {
@@ -35,29 +33,23 @@ public class EruptMenuService implements DataProxy<EruptMenu> {
     private EruptDao eruptDao;
 
     @Resource
-    private EruptUserService eruptUserService;
+    private EruptSessionService sessionService;
 
     @Resource
     private EruptContextService eruptContextService;
 
-
-    public List<EruptMenuVo> geneMenuListVo(List<EruptMenu> menus) {
-        List<EruptMenuVo> list = new ArrayList<>();
-        menus.stream().filter(menu -> menu.getStatus() == MenuStatus.OPEN.getValue()).forEach(menu -> {
-            Long pid = null == menu.getParentMenu() ? null : menu.getParentMenu().getId();
-            list.add(new EruptMenuVo(menu.getId(), menu.getCode(), menu.getName(), menu.getType(), menu.getValue(), menu.getIcon(), pid));
-        });
-        return list;
-    }
-
     public List<EruptMenu> getUserAllMenu(EruptUser eruptUser) {
         List<EruptMenu> menus;
         if (null != eruptUser.getIsAdmin() && eruptUser.getIsAdmin()) {
-            menus = eruptDao.getEntityManager().createQuery("from EruptMenu order by sort", EruptMenu.class).getResultList();
+            menus = eruptDao.getEntityManager().createQuery("from EruptMenu order by sort", EruptMenu.class)
+                    .getResultList();
         } else {
             Set<EruptMenu> menuSet = new HashSet<>();
-            eruptUser.getRoles().stream().filter(EruptRole::getStatus).map(EruptRole::getMenus).forEach(menuSet::addAll);
-            menus = menuSet.stream().sorted(Comparator.comparing(EruptMenu::getSort, Comparator.nullsFirst(Integer::compareTo))).collect(Collectors.toList());
+            eruptUser.getRoles().stream().filter(EruptRole::getStatus).map(EruptRole::getMenus)
+                    .forEach(menuSet::addAll);
+            menus = menuSet.stream()
+                    .sorted(Comparator.comparing(EruptMenu::getSort, Comparator.nullsFirst(Integer::compareTo)))
+                    .collect(Collectors.toList());
         }
         return menus;
     }
@@ -80,7 +72,9 @@ public class EruptMenuService implements DataProxy<EruptMenu> {
             throw new EruptWebApiRuntimeException("When selecting a menu type, the type value cannot be empty");
         }
         try {
-            eruptUserService.cacheUserInfo(eruptUserService.getCurrentEruptUser(), eruptContextService.getCurrentToken());
+            EruptUser eruptUser = sessionService.getCurrentEruptUser();
+            sessionService.cacheUserInfo(eruptUser, this.getUserAllMenu(eruptUser),
+                    eruptContextService.getCurrentToken());
         } catch (JsonProcessingException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -91,7 +85,6 @@ public class EruptMenuService implements DataProxy<EruptMenu> {
     public void afterUpdate(EruptMenu eruptMenu) {
         this.afterAdd(eruptMenu);
     }
-
 
     @Override
     public void afterDelete(EruptMenu eruptMenu) {

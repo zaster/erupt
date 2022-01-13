@@ -31,11 +31,12 @@ import xyz.erupt.jpa.model.BaseModel;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.service.EruptContextService;
+import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 
 /**
  * @author YuePeng
- * date 2021/3/10 11:30
+ *         date 2021/3/10 11:30
  */
 @MappedSuperclass
 @PreDataProxy(LookerPostLevel.class)
@@ -45,20 +46,14 @@ import xyz.erupt.upms.service.EruptUserService;
 public class LookerPostLevel extends BaseModel implements DataProxy<LookerPostLevel> {
 
     @ManyToOne
-    @EruptField(
-            columns = {
-                    @STColumn(title = "创建人", index = "name"),
-                    @STColumn(title = "所属组织", index = "eruptOrg.name"),
-                    @STColumn(title = "岗位", index = "eruptPost.name"),
-            },
-            edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE)
-    )
+    @EruptField(columns = {
+            @STColumn(title = "创建人", index = "name"),
+            @STColumn(title = "所属组织", index = "eruptOrg.name"),
+            @STColumn(title = "岗位", index = "eruptPost.name"),
+    }, edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE))
     private EruptUserVo createUser;
 
-    @EruptField(
-            columns = @STColumn(title = "创建时间", sort = true),
-            edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME))
-    )
+    @EruptField(columns = @STColumn(title = "创建时间", sort = true), edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME)))
     private Date createTime;
 
     @SkipSerialize
@@ -80,30 +75,37 @@ public class LookerPostLevel extends BaseModel implements DataProxy<LookerPostLe
     @Resource
     @Transient
     private I18NTranslateService i18NTranslateService;
+    @Transient
+    @Resource
+    private EruptSessionService sessionService;
 
     @Override
     public String beforeFetch(List<Condition> conditions) {
-        EruptUser eruptUser = eruptUserService.getCurrentEruptUser();
+        EruptUser eruptUser = sessionService.getCurrentEruptUser();
         if (eruptUser.getIsAdmin()) {
             return null;
         }
         if (null == eruptUser.getEruptOrg() || null == eruptUser.getEruptPost()) {
-            throw new EruptWebApiRuntimeException(eruptUser.getName() + " " + i18NTranslateService.translate("未绑定的部门无法查看数据"));
+            throw new EruptWebApiRuntimeException(
+                    eruptUser.getName() + " " + i18NTranslateService.translate("未绑定的部门无法查看数据"));
         }
-        return "(" + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.id = " + eruptUserService.getCurrentUid()
-                + " or " + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptOrg.id = " + eruptUser.getEruptOrg().getId() + " and "
-                + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptPost.weight < " + eruptUser.getEruptPost().getWeight() + ")";
+        return "(" + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.id = "
+                + sessionService.getCurrentUid()
+                + " or " + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptOrg.id = "
+                + eruptUser.getEruptOrg().getId() + " and "
+                + eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptPost.weight < "
+                + eruptUser.getEruptPost().getWeight() + ")";
     }
 
     @Override
     public void beforeAdd(LookerPostLevel lookerPostLevel) {
         lookerPostLevel.setCreateTime(new Date());
-        lookerPostLevel.setCreateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+        lookerPostLevel.setCreateUser(new EruptUserVo(sessionService.getCurrentUid()));
     }
 
     @Override
     public void beforeUpdate(LookerPostLevel lookerPostLevel) {
         lookerPostLevel.setUpdateTime(new Date());
-        lookerPostLevel.setUpdateUser(new EruptUser(eruptUserService.getCurrentUid()));
+        lookerPostLevel.setUpdateUser(new EruptUser(sessionService.getCurrentUid()));
     }
 }

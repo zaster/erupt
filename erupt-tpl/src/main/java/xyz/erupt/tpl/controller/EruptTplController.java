@@ -1,6 +1,5 @@
 package xyz.erupt.tpl.controller;
 
-
 import static xyz.erupt.core.constant.EruptRestPath.ERUPT_API;
 
 import java.lang.reflect.Method;
@@ -41,7 +40,7 @@ import xyz.erupt.tpl.service.EruptTplService;
  * Erupt 页面结构构建信息
  *
  * @author YuePeng
- * date 2018-09-28.
+ *         date 2018-09-28.
  */
 @RestController
 @RequestMapping(ERUPT_API + EruptTplController.TPL)
@@ -52,7 +51,7 @@ public class EruptTplController {
     @Resource
     private EruptTplService eruptTplService;
 
-    @GetMapping(value = "/{name}", produces = {"text/html;charset=utf-8"})
+    @GetMapping(value = "/{name}", produces = { "text/html;charset=utf-8" })
     @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.MENU, verifyMethod = EruptRouter.VerifyMethod.PARAM)
     public void eruptTplPage(@PathVariable("name") String fileName, HttpServletResponse response) throws Exception {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -71,33 +70,34 @@ public class EruptTplController {
         eruptTplService.tplRender(eruptTpl.engine(), path, (Map) method.invoke(obj), response.getWriter());
     }
 
-    @GetMapping(value = "/html-field/{erupt}/{field}", produces = {"text/html;charset=UTF-8"})
+    @GetMapping(value = "/html-field/{erupt}/{field}", produces = { "text/html;charset=UTF-8" })
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.MENU, verifyMethod = EruptRouter.VerifyMethod.PARAM)
     public void getEruptFieldHtml(@PathVariable("erupt") String eruptName, @PathVariable("field") String field,
-                                  HttpServletResponse response) {
+            HttpServletResponse response) {
         EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         Tpl tpl = eruptModel.getEruptFieldMap().get(field).getEruptField().edit().tplType();
-        
+
         eruptTplService.tplRender(tpl, null, response);
     }
 
-    @GetMapping(value = "/operation_tpl/{erupt}/{code}", produces = {"text/html;charset=utf-8"})
+    @GetMapping(value = "/operation_tpl/{erupt}/{code}", produces = { "text/html;charset=utf-8" })
     @EruptRouter(authIndex = 2, verifyType = EruptRouter.VerifyType.ERUPT, verifyMethod = EruptRouter.VerifyMethod.PARAM)
     public void getOperationTpl(@PathVariable("erupt") String eruptName, @PathVariable("code") String code,
-                                @RequestParam(value = "ids", required = false) String[] ids,
-                                HttpServletResponse response) {
+            @RequestParam(value = "ids", required = false) String[] ids,
+            HttpServletResponse response) {
         EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-        RowOperation operation = Arrays.stream(eruptModel.getErupt().rowOperation()).filter(it ->
-                it.code().equals(code)).findFirst().orElseThrow(EruptNoLegalPowerException::new);
+        RowOperation operation = Arrays.stream(eruptModel.getErupt().rowOperation())
+                .filter(it -> it.code().equals(code)).findFirst().orElseThrow(EruptNoLegalPowerException::new);
         Erupts.powerLegal(ExprInvoke.getExpr(operation.show()));
         if (operation.tpl().engine() == Tpl.Engine.Native || operation.mode() == RowOperation.Mode.BUTTON) {
             eruptTplService.tplRender(operation.tpl(), null, response);
             return;
         }
         Map<String, Object> map = new HashMap<>();
-        map.put(EngineConst.INJECT_ROWS, Stream.of(ids).map(id -> DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
-                .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id))).collect(Collectors.toList()));
+        map.put(EngineConst.INJECT_ROWS,
+                Stream.of(ids).map(id -> DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
+                        .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id))).collect(Collectors.toList()));
         eruptTplService.tplRender(operation.tpl(), map, response);
     }
 }

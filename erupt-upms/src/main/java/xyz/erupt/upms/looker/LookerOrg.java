@@ -31,11 +31,12 @@ import xyz.erupt.jpa.model.BaseModel;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.service.EruptContextService;
+import xyz.erupt.upms.service.EruptSessionService;
 import xyz.erupt.upms.service.EruptUserService;
 
 /**
  * @author YuePeng
- * date 2021/3/10 11:30
+ *         date 2021/3/10 11:30
  */
 @MappedSuperclass
 @PreDataProxy(LookerOrg.class)
@@ -45,19 +46,13 @@ import xyz.erupt.upms.service.EruptUserService;
 public class LookerOrg extends BaseModel implements DataProxy<LookerOrg> {
 
     @ManyToOne
-    @EruptField(
-            columns = {
-                    @STColumn(title = "创建人", index = "name"),
-                    @STColumn(title = "所属组织", index = "eruptOrg.name")
-            },
-            edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE)
-    )
+    @EruptField(columns = {
+            @STColumn(title = "创建人", index = "name"),
+            @STColumn(title = "所属组织", index = "eruptOrg.name")
+    }, edit = @Edit(title = "创建人", readonly = @Readonly, type = EditType.REFERENCE_TABLE))
     private EruptUserVo createUser;
 
-    @EruptField(
-            columns = @STColumn(title = "创建时间", sort = true),
-            edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME))
-    )
+    @EruptField(columns = @STColumn(title = "创建时间", sort = true), edit = @Edit(title = "创建时间", readonly = @Readonly, dateType = @DateType(type = DateType.Type.DATE_TIME)))
     private Date createTime;
 
     @SkipSerialize
@@ -79,29 +74,34 @@ public class LookerOrg extends BaseModel implements DataProxy<LookerOrg> {
     @Resource
     @Transient
     private I18NTranslateService i18NTranslateService;
+    @Transient
+    @Resource
+    private EruptSessionService sessionService;
 
     @Override
     public String beforeFetch(List<Condition> conditions) {
-        EruptUser eruptUser = eruptUserService.getCurrentEruptUser();
+        EruptUser eruptUser = sessionService.getCurrentEruptUser();
         if (eruptUser.getIsAdmin()) {
             return null;
         }
         if (null == eruptUser.getEruptOrg()) {
-            throw new EruptWebApiRuntimeException(eruptUser.getName() + " " + i18NTranslateService.translate("未绑定的组织无法查看数据"));
+            throw new EruptWebApiRuntimeException(
+                    eruptUser.getName() + " " + i18NTranslateService.translate("未绑定的组织无法查看数据"));
         } else {
-            return eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptOrg.id = " + eruptUser.getEruptOrg().getId();
+            return eruptContextService.getContextEruptClass().getSimpleName() + ".createUser.eruptOrg.id = "
+                    + eruptUser.getEruptOrg().getId();
         }
     }
 
     @Override
     public void beforeAdd(LookerOrg lookerOrg) {
         lookerOrg.setCreateTime(new Date());
-        lookerOrg.setCreateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+        lookerOrg.setCreateUser(new EruptUserVo(sessionService.getCurrentUid()));
     }
 
     @Override
     public void beforeUpdate(LookerOrg lookerOrg) {
         lookerOrg.setUpdateTime(new Date());
-        lookerOrg.setUpdateUser(new EruptUserVo(eruptUserService.getCurrentUid()));
+        lookerOrg.setUpdateUser(new EruptUserVo(sessionService.getCurrentUid()));
     }
 }

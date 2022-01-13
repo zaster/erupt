@@ -1,13 +1,10 @@
 package xyz.erupt.upms.service;
 
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -34,7 +31,6 @@ import xyz.erupt.upms.constant.SessionKey;
 import xyz.erupt.upms.fun.EruptLogin;
 import xyz.erupt.upms.fun.LoginProxy;
 import xyz.erupt.upms.model.EruptMenu;
-import xyz.erupt.upms.model.EruptRole;
 import xyz.erupt.upms.model.EruptUser;
 import xyz.erupt.upms.model.EruptUserVo;
 import xyz.erupt.upms.model.log.EruptLoginLog;
@@ -42,7 +38,7 @@ import xyz.erupt.upms.util.IpUtil;
 
 /**
  * @author YuePeng
- * date 2018-12-13.
+ *         date 2018-12-13.
  */
 @Service
 public class EruptUserService {
@@ -73,29 +69,7 @@ public class EruptUserService {
     @Resource
     private EruptMenuService eruptMenuService;
 
-
     public static final String LOGIN_ERROR_HINT = "账号或密码错误";
-
-    public void cacheUserInfo(EruptUser eruptUser, String token) throws JsonProcessingException {
-        List<EruptMenu> eruptMenus = eruptMenuService.getUserAllMenu(eruptUser);
-        Map<String, Object> valueMap = new HashMap<>();
-        Map<String, Object> codeMap = new HashMap<>();
-        for (EruptMenu menu : eruptMenus) {
-            codeMap.put(menu.getCode(), menu);
-            if (null != menu.getValue()) {
-                valueMap.put(menu.getValue(), menu);
-            }
-        }
-        StringBuilder sb = new StringBuilder();
-        for (EruptRole role : eruptUser.getRoles()) {
-            sb.append(role.getPowerOff()).append("|");
-        }
-        sessionService.putMap(SessionKey.MENU_VALUE_MAP + token, valueMap, eruptUpmsConfig.getExpireTimeByLogin());
-        sessionService.putMap(SessionKey.MENU_CODE_MAP + token, codeMap, eruptUpmsConfig.getExpireTimeByLogin());
-        
-        sessionService.put(SessionKey.MENU_VIEW + token, mapper.writeValueAsString(eruptMenuService.geneMenuListVo(eruptMenus)), eruptUpmsConfig.getExpireTimeByLogin());
-        sessionService.put(SessionKey.ROLE_POWER + token, sb.toString(), eruptUpmsConfig.getExpireTimeByLogin());
-    }
 
     public static LoginProxy findEruptLogin() {
         EruptLogin eruptLogin = EruptApplication.getPrimarySource().getAnnotation(EruptLogin.class);
@@ -138,14 +112,16 @@ public class EruptUserService {
         }
     }
 
-    //校验密码
+    // 校验密码
     public boolean checkPwd(EruptUser eruptUser, String pwd) {
         if (eruptAppProp.getPwdTransferEncrypt()) {
             String digestPwd = eruptUser.getIsMd5() ? eruptUser.getPassword() : MD5Util.digest(eruptUser.getPassword());
-            String calcPwd = MD5Util.digest(digestPwd + Calendar.getInstance().get(Calendar.DAY_OF_MONTH) + eruptUser.getAccount());
+            String calcPwd = MD5Util
+                    .digest(digestPwd + Calendar.getInstance().get(Calendar.DAY_OF_MONTH) + eruptUser.getAccount());
             return pwd.equalsIgnoreCase(calcPwd);
         } else {
-            if (eruptUser.getIsMd5()) pwd = MD5Util.digest(pwd);
+            if (eruptUser.getIsMd5())
+                pwd = MD5Util.digest(pwd);
             return pwd.equals(eruptUser.getPassword());
         }
     }
@@ -186,7 +162,8 @@ public class EruptUserService {
         loginLog.setIp(IpUtil.getIpAddr(request));
         loginLog.setSystemName(userAgent.getOperatingSystem().getName());
         loginLog.setRegion(IpUtil.getCityInfo(loginLog.getIp()));
-        loginLog.setBrowser(userAgent.getBrowser().getName() + " " + (userAgent.getBrowserVersion() == null ? "" : userAgent.getBrowserVersion().getMajorVersion()));
+        loginLog.setBrowser(userAgent.getBrowser().getName() + " "
+                + (userAgent.getBrowserVersion() == null ? "" : userAgent.getBrowserVersion().getMajorVersion()));
         loginLog.setDeviceType(userAgent.getOperatingSystem().getDeviceType().getName());
         eruptDao.getEntityManager().persist(loginLog);
     }
@@ -218,31 +195,25 @@ public class EruptUserService {
     }
 
     private EruptUser findEruptUserByAccount(String account) {
-        return eruptDao.queryEntity(EruptUser.class, "account = :account", new HashMap<String, Object>(1) {{
-            this.put("account", account);
-        }});
+        return eruptDao.queryEntity(EruptUser.class, "account = :account", new HashMap<String, Object>(1) {
+            {
+                this.put("account", account);
+            }
+        });
     }
 
-    //当前用户菜单中，通过编码获取菜单
+    // 当前用户菜单中，通过编码获取菜单
     public EruptMenu getEruptMenuByCode(String menuValue) throws JsonMappingException, JsonProcessingException {
-        return sessionService.getMapValue(SessionKey.MENU_CODE_MAP + eruptContextService.getCurrentToken(), menuValue, EruptMenu.class);
+        return sessionService.getMapValue(SessionKey.MENU_CODE_MAP + eruptContextService.getCurrentToken(), menuValue,
+                EruptMenu.class);
     }
 
-    //当前用户菜单中，通过菜单类型值获取菜单
+    // 当前用户菜单中，通过菜单类型值获取菜单
     public EruptMenu getEruptMenuByValue(String menuValue) throws JsonMappingException, JsonProcessingException {
-        return sessionService.getMapValue(SessionKey.MENU_VALUE_MAP + eruptContextService.getCurrentToken(), menuValue, EruptMenu.class);
+        return sessionService.getMapValue(SessionKey.MENU_VALUE_MAP + eruptContextService.getCurrentToken(), menuValue,
+                EruptMenu.class);
     }
 
-    //获取当前用户ID
-    public Long getCurrentUid() {
-        Object uid = sessionService.get(SessionKey.USER_TOKEN + eruptContextService.getCurrentToken());
-        return null == uid ? null : Long.valueOf(uid.toString());
-    }
-
-    //获取当前登录用户对象
-    public EruptUser getCurrentEruptUser() {
-        Long uid = this.getCurrentUid();
-        return null == uid ? null : eruptDao.getEntityManager().find(EruptUser.class, uid);
-    }
+    // 获取当前用户ID
 
 }
