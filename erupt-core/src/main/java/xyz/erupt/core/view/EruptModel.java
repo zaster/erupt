@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.Getter;
@@ -14,10 +15,11 @@ import xyz.erupt.core.util.CloneSupport;
 
 /**
  * @author YuePeng
- * date 2018-09-29.
+ *         date 2018-09-29.
  */
 @Getter
 @Setter
+@JsonIgnoreProperties(value = { "clazz", "erupt", "eruptFieldMap" })
 public final class EruptModel implements Cloneable {
 
     private transient Class<?> clazz;
@@ -41,7 +43,7 @@ public final class EruptModel implements Cloneable {
 
     @Override
     public final EruptModel clone() throws CloneNotSupportedException {
-        EruptModel eruptModel = EruptModel.class.cast(super.clone()) ;
+        EruptModel eruptModel = EruptModel.class.cast(super.clone());
         eruptModel.eruptFieldModels = eruptFieldModels.stream().map(CloneSupport::clone).collect(Collectors.toList());
         return eruptModel;
     }
