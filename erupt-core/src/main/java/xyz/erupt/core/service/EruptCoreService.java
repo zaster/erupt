@@ -39,7 +39,7 @@ import xyz.erupt.core.view.EruptModel;
 
 /**
  * @author YuePeng
- * date 9/28/18.
+ *         date 9/28/18.
  */
 @Order
 @Service
@@ -47,17 +47,19 @@ import xyz.erupt.core.view.EruptModel;
 public class EruptCoreService implements ApplicationRunner {
 
     private static ObjectMapper objectMapper;
-    
+
     private static final Map<String, EruptModel> ERUPTS = new LinkedCaseInsensitiveMap<>();
+
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         EruptCoreService.objectMapper = objectMapper;
     }
-    public static  <TT>EruptModel getErupt(String eruptName) {
-        return (EruptModel)ERUPTS.get(eruptName);
+
+    public static <TT> EruptModel getErupt(String eruptName) {
+        return (EruptModel) ERUPTS.get(eruptName);
     }
 
-    //需要动态构建的EruptModel视图属性
+    // 需要动态构建的EruptModel视图属性
     @SneakyThrows
     public static <TT> EruptModel getEruptView(String eruptName) {
         EruptModel em = EruptCoreService.<TT>getErupt(eruptName).clone();
@@ -71,32 +73,42 @@ public class EruptCoreService implements ApplicationRunner {
             }
             STColumn[] columns = fieldModel.getEruptField().columns();
             ArrayNode jsonArray = objectMapper.createArrayNode();
-            Arrays.stream(columns).forEach(column->{
-                
-                ObjectNode jsonObject=AnnotationUtil.annotationToJsonByReflect(column);
+            Arrays.stream(columns).forEach(column -> {
+
+                ObjectNode jsonObject = AnnotationUtil.annotationToJsonByReflect(column);
                 {
-                    
+
                     String title = column.title();
                     String desc = column.desc();
-                    ObjectNode titleObject=objectMapper.createObjectNode();
+                    ObjectNode titleObject = objectMapper.createObjectNode();
+                    // ArrayNode chioceList = ;
                     titleObject.put("text", title);
                     titleObject.put("optionHelp", desc);
                     jsonObject.set("title", titleObject);
+                    if (null != column.edit() && column.edit().type() == EditType.CHOICE)
+                        jsonObject.put("choiceList",
+                                objectMapper.valueToTree(EruptUtil.getChoiceList(column.edit().choiceType())));
                 }
-                switch(column.type()) {
+                switch (column.type()) {
                     case BADGE:
-                        
-                        jsonObject.set("badge", EruptUtil.getOptions(column.choices(),"default"));
+
+                        jsonObject.set("badge",
+                                EruptUtil.getOptions((column.edit().type() == EditType.AUTO) ? edit.choiceType()
+                                        : column.edit().choiceType(), "default"));
                         break;
                     case YN:
                         jsonObject.put("type", "tag");
-                        jsonObject.set("tag", EruptUtil.getYn(column.bools()));
+                        jsonObject.set("tag", EruptUtil.getYn(
+                                (column.edit().type() == EditType.AUTO) ? edit.boolType() : column.edit().boolType()));
+
                         break;
                     case TAG:
-                        jsonObject.set("tag", EruptUtil.getOptions(column.choices(),""));
+                        jsonObject.set("tag",
+                                EruptUtil.getOptions((column.edit().type() == EditType.AUTO) ? edit.choiceType()
+                                        : column.edit().choiceType(), ""));
                         break;
                 }
-                
+
                 jsonArray.add(jsonObject);
             });
             fieldModel.getEruptFieldJson().set("columns", jsonArray);
@@ -109,10 +121,10 @@ public class EruptCoreService implements ApplicationRunner {
                         copy = true;
                         em.setEruptJson(em.getEruptJson().deepCopy());
                     }
-                    ArrayNode jsonArray = (ArrayNode)em.getEruptJson().get("rowOperation");
-                    jsonArray.forEach(node->{
-                        if (rowOperation.code().equals(node.get("code").asText())){
-                            
+                    ArrayNode jsonArray = (ArrayNode) em.getEruptJson().get("rowOperation");
+                    jsonArray.forEach(node -> {
+                        if (rowOperation.code().equals(node.get("code").asText())) {
+
                             return;
                         }
                     });
@@ -123,16 +135,17 @@ public class EruptCoreService implements ApplicationRunner {
     }
 
     private static <TT> EruptModel initEruptModel(Class<TT> clazz) {
-        //erupt class data to memory
+        // erupt class data to memory
         EruptModel eruptModel = new EruptModel(clazz);
         // erupt field data to memory
         eruptModel.setEruptFieldModels(new ArrayList<>());
         eruptModel.setEruptFieldMap(new LinkedCaseInsensitiveMap<>());
-        ReflectUtil.findClassAllFields(clazz, field -> Optional.ofNullable(field.getAnnotation(EruptField.class)).ifPresent(ignore -> {
-            EruptFieldModel eruptFieldModel = new EruptFieldModel(field);
-            eruptModel.getEruptFieldModels().add(eruptFieldModel);
-            eruptModel.getEruptFieldMap().put(field.getName(), eruptFieldModel);
-        }));
+        ReflectUtil.findClassAllFields(clazz,
+                field -> Optional.ofNullable(field.getAnnotation(EruptField.class)).ifPresent(ignore -> {
+                    EruptFieldModel eruptFieldModel = new EruptFieldModel(field);
+                    eruptModel.getEruptFieldModels().add(eruptFieldModel);
+                    eruptModel.getEruptFieldMap().put(field.getName(), eruptFieldModel);
+                }));
         eruptModel.getEruptFieldModels().sort(Comparator.comparingInt((a) -> a.getEruptField().sort()));
         // erupt annotation validate
         EruptAnnotationException.validateEruptInfo(eruptModel);
@@ -142,7 +155,7 @@ public class EruptCoreService implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         TimeRecorder timeRecorder = new TimeRecorder();
-        EruptSpringUtil.scannerPackage(EruptApplication.getScanPackage(), new TypeFilter[]{
+        EruptSpringUtil.scannerPackage(EruptApplication.getScanPackage(), new TypeFilter[] {
                 new AnnotationTypeFilter(Erupt.class)
         }, clazz -> ERUPTS.put(clazz.getSimpleName(), initEruptModel(clazz)));
         log.info("Erupt core initialization completed in {} ms", timeRecorder.recorder());

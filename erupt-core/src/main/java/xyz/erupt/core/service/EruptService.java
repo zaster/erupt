@@ -26,7 +26,7 @@ import xyz.erupt.core.view.TableQueryVo;
 
 /**
  * @author YuePeng
- * date 2020-02-29
+ *         date 2020-02-29
  */
 @Service
 @Slf4j
@@ -38,30 +38,37 @@ public class EruptService {
      * @param serverCondition 自定义条件
      * @param customCondition 条件字符串
      */
-    public <TT>Page<TT> getEruptData(EruptModel eruptModel, TableQueryVo tableQueryVo, List<Condition> serverCondition, String... customCondition) {
+    public <TT> Page<TT> getEruptData(EruptModel eruptModel, TableQueryVo tableQueryVo, List<Condition> serverCondition,
+            String... customCondition) {
         Erupts.powerLegal(eruptModel, PowerObject::isQuery);
         List<Condition> legalConditions = EruptUtil.geneEruptSearchCondition(eruptModel, tableQueryVo.getCondition());
-        
+
         List<String> conditionStrings = new ArrayList<>();
-        //DependTree logic
+        // DependTree logic
         LinkTree dependTree = eruptModel.getErupt().linkTree();
         if (StringUtils.isNotBlank(dependTree.field())) {
             if (null == tableQueryVo.getLinkTreeVal()) {
-                if (dependTree.dependNode()) return new Page<TT>();
+                if (dependTree.dependNode())
+                    return new Page<TT>();
             } else {
-                EruptModel treeErupt = EruptCoreService.getErupt(ReflectUtil.findClassField(eruptModel.getClazz(), dependTree.field()).getType().getSimpleName());
-                conditionStrings.add(dependTree.field() + "." + treeErupt.getErupt().primaryKeyCol() + " = '" + tableQueryVo.getLinkTreeVal() + "'");
+                EruptModel treeErupt = EruptCoreService.getErupt(ReflectUtil
+                        .findClassField(eruptModel.getClazz(), dependTree.field()).getType().getSimpleName());
+                conditionStrings.add(dependTree.field() + "." + treeErupt.getErupt().primaryKeyCol() + " in( "
+                        + tableQueryVo.getLinkTreeVal() + ")");
             }
         }
         conditionStrings.addAll(Arrays.asList(customCondition));
-        DataProxyInvoke.invoke(eruptModel, (dataProxy -> Optional.ofNullable(dataProxy.beforeFetch(legalConditions)).ifPresent(conditionStrings::add)));
+        DataProxyInvoke.invoke(eruptModel, (dataProxy -> Optional.ofNullable(dataProxy.beforeFetch(legalConditions))
+                .ifPresent(conditionStrings::add)));
         Optional.ofNullable(serverCondition).ifPresent(legalConditions::addAll);
         Optional.ofNullable(tableQueryVo.getRelation()).ifPresent(legalConditions::addAll);
         Page<TT> page = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
-                .queryList(eruptModel, new Page<TT>(tableQueryVo.getPageIndex(), tableQueryVo.getPageSize(), tableQueryVo.getSort()),
-                        EruptQuery.builder().orderBy(tableQueryVo.getSort()).conditionStrings(conditionStrings).conditions(legalConditions).build());
+                .queryList(eruptModel,
+                        new Page<TT>(tableQueryVo.getPageIndex(), tableQueryVo.getPageSize(), tableQueryVo.getSort()),
+                        EruptQuery.builder().orderBy(tableQueryVo.getSort()).conditionStrings(conditionStrings)
+                                .conditions(legalConditions).build());
         DataProxyInvoke.<TT>invoke(eruptModel, (dataProxy -> dataProxy.afterFetch(page.getList())));
-        //Optional.ofNullable(page.getList()).ifPresent(it -> DataHandlerUtil.convertDataToEruptView(eruptModel, it));
+
         return page;
     }
 
@@ -71,7 +78,7 @@ public class EruptService {
      * @param eruptModel eruptModel
      * @param id         标识主键
      */
-    public <TT>void verifyIdPermissions(EruptModel eruptModel, String id) {
+    public <TT> void verifyIdPermissions(EruptModel eruptModel, String id) {
         List<Condition> conditions = new ArrayList<>();
         conditions.add(new Condition(eruptModel.getErupt().primaryKeyCol(), id, QueryExpression.EQ));
         Page<TT> page = DataProcessorManager.<TT>getEruptDataProcessor(eruptModel.getClazz())

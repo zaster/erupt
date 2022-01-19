@@ -14,7 +14,7 @@ public class Condition {
 
     private Object value;
 
-    private transient QueryExpression expression = QueryExpression.EQ;
+    private QueryExpression expression = QueryExpression.EQ;
 
     public Condition(String key, Object value, QueryExpression expression) {
         this.key = key;

@@ -91,7 +91,6 @@ public class EruptDataController {
 
         private final PreEruptDataService preEruptDataService;
 
-
         private final I18NTranslateService i18NTranslateService;
 
         @PostMapping({ "/table/{erupt}" })
@@ -118,7 +117,7 @@ public class EruptDataController {
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
                 Object obj = eruptModel.getClazz().newInstance();
                 DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.addBehavior(obj)));
-                return EruptUtil.generateEruptDataMap(eruptModel, obj);
+                return obj;
         }
 
         @GetMapping("/{erupt}/{id}")
@@ -131,14 +130,15 @@ public class EruptDataController {
                 Object data = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz()).findDataById(eruptModel,
                                 EruptUtil.toEruptId(eruptModel, id));
                 DataProxyInvoke.invoke(eruptModel, (dataProxy -> dataProxy.editBehavior(data)));
-                return EruptUtil.generateEruptDataMap(eruptModel, data);
+                return data;
         }
 
         public static final String OPERATOR_PATH_STR = "/operator";
 
         public static final String ACTION_PATH = "/action/";
 
-        public static final String SUB_ACTION_PATH="/subaction/";
+        public static final String SUB_ACTION_PATH = "/subaction/";
+
         @SneakyThrows
         @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
@@ -146,11 +146,10 @@ public class EruptDataController {
         public EruptApiModel execEruptOperator(@PathVariable("erupt") String eruptName,
                         @PathVariable("code") String code, @RequestBody ObjectNode body) {
 
-               
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                log.info(""+body.get("param"));
+                log.info("" + body.get("param"));
 
-                JsonNode paramobj = body.get("param") ;
+                JsonNode paramobj = body.get("param");
                 RowOperation rowOperation = Arrays.stream(eruptModel.getErupt().rowOperation())
                                 .filter(it -> code.equals(it.code())).findFirst()
                                 .orElseThrow(EruptNoLegalPowerException::new);
@@ -166,10 +165,11 @@ public class EruptDataController {
                 Object param = null;
                 if (rowOperation.eruptClass() != void.class && rowOperation.eruptMode() == EruptMode.FORM) {
                         EruptModel erupt = EruptCoreService.getErupt(rowOperation.eruptClass().getSimpleName());
-                        EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt,paramobj);
-                        if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR) return eruptApiModel;
-                        param=objectMapper.treeToValue(paramobj, rowOperation.eruptClass());
-                }  else {
+                        EruptApiModel eruptApiModel = EruptUtil.validateEruptValue(erupt, paramobj);
+                        if (eruptApiModel.getStatus() == EruptApiModel.Status.ERROR)
+                                return eruptApiModel;
+                        param = objectMapper.treeToValue(paramobj, rowOperation.eruptClass());
+                } else {
                         param = paramobj;
                 }
                 // 表格形式参数
@@ -202,54 +202,64 @@ public class EruptDataController {
                 return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
 
         }
+
         @SneakyThrows
-        @PostMapping("/{erupt}"+ACTION_PATH+"{code}"+SUB_ACTION_PATH+"{subcode}")
+        @PostMapping("/{erupt}" + ACTION_PATH + "{code}" + SUB_ACTION_PATH + "{subcode}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptActionConfig.class)
         public EruptApiModel executeAction(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code,@PathVariable("subcode") String subcode,
+                        @PathVariable("code") String code, @PathVariable("subcode") String subcode,
                         @RequestBody ObjectNode body) {
 
-               
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
-                ModalButton button = Arrays.stream(action.buttons()).filter(it->subcode.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
-                ActionHandler<Object,Object,Object> handler = EruptSpringUtil.getBean(button.handler());
+                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code()))
+                                .findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ModalButton button = Arrays.stream(action.buttons()).filter(it -> subcode.equals(it.code())).findFirst()
+                                .orElseThrow(EruptNoLegalPowerException::new);
+                ActionHandler<Object, Object, Object> handler = EruptSpringUtil.getBean(button.handler());
 
-                JsonNode paramobj = body.get("param") ;
+                JsonNode paramobj = body.get("param");
                 JsonNode dependency = paramobj.get("dependency");
                 JsonNode content = paramobj.get("content");
                 String dependErupt = dependency.get("eruptName").asText();
                 String contentErupt = content.get("eruptName").asText();
-                List<Object> dependFromList = dependency.hasNonNull("from")?this.getListFromEruptIds(dependency.get("from").get("ids"), EruptCoreService.getErupt(dependency.get("from").get("eruptName").asText())):null;
-                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"), EruptCoreService.getErupt(dependErupt));
-                List<Object> contentList = this.getListFromEruptIds(content.get("ids"), EruptCoreService.getErupt(contentErupt));
+                List<Object> dependFromList = dependency.hasNonNull("from")
+                                ? this.getListFromEruptIds(dependency.get("from").get("ids"),
+                                                EruptCoreService.getErupt(
+                                                                dependency.get("from").get("eruptName").asText()))
+                                : null;
+                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"),
+                                EruptCoreService.getErupt(dependErupt));
+                List<Object> contentList = this.getListFromEruptIds(content.get("ids"),
+                                EruptCoreService.getErupt(contentErupt));
                 Object contentFormValue = this.convertObject(content.get("formValue"), action.contentErupt());
 
-                if (!ExprInvoke.getExpr(action.show())||!ExprInvoke.getExpr(button.show())) {
+                if (!ExprInvoke.getExpr(action.show()) || !ExprInvoke.getExpr(button.show())) {
                         throw new EruptNoLegalPowerException();
                 }
                 if (button.handler().isInterface()) {
-                        return EruptApiModel.errorApi("请为" + action.text()+button.label() + "实现 OperationHandler 接口");
+                        return EruptApiModel.errorApi("请为" + action.text() + button.label() + "实现 OperationHandler 接口");
                 }
-                handler.exec(dependFromList,dependList,contentList,contentFormValue,button.param());
+                handler.exec(dependFromList, dependList, contentList, contentFormValue, button.param());
                 return EruptApiModel.successApi(i18NTranslateService.translate("执行成功"), null);
 
         }
+
         @PostMapping("/{erupt}" + ACTION_PATH + "{code}/importx/{subcode}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptActionConfig.class)
         @SneakyThrows
         public EruptApiModel executeActionImport(@PathVariable("erupt") String eruptName,
-                        @PathVariable("code") String code, 
-                        @RequestPart("file") MultipartFile file, 
+                        @PathVariable("code") String code,
+                        @RequestPart("file") MultipartFile file,
                         @RequestPart("param") ObjectNode body) {
 
                 EruptModel eruptModel = EruptCoreService.getErupt(eruptName);
-                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code())).findFirst().orElseThrow(EruptNoLegalPowerException::new);
-                ModalButton button = Arrays.stream(action.buttons()).findFirst().orElseThrow(EruptNoLegalPowerException::new);
-                ActionHandler<Object,Object,Object> operationHandler = EruptSpringUtil.getBean(button.handler());
-
+                Action action = Arrays.stream(eruptModel.getErupt().actions()).filter(it -> code.equals(it.code()))
+                                .findFirst().orElseThrow(EruptNoLegalPowerException::new);
+                ModalButton button = Arrays.stream(action.buttons()).findFirst()
+                                .orElseThrow(EruptNoLegalPowerException::new);
+                ActionHandler<Object, Object, Object> operationHandler = EruptSpringUtil.getBean(button.handler());
 
                 if (!ExprInvoke.getExpr(button.show())) {
                         throw new EruptNoLegalPowerException();
@@ -260,26 +270,33 @@ public class EruptDataController {
                 if (file.isEmpty()) {
                         return EruptApiModel.errorApi("上传失败，请选择文件");
                 }
-                
-                JsonNode paramobj = body.get("param") ;
+
+                JsonNode paramobj = body.get("param");
                 JsonNode dependency = paramobj.get("dependency");
                 JsonNode content = paramobj.get("content");
                 String dependErupt = dependency.get("eruptName").asText();
                 String contentErupt = content.get("eruptName").asText();
-                List<Object> dependFromList = dependency.hasNonNull("from")?this.getListFromEruptIds(dependency.get("from").get("ids"), EruptCoreService.getErupt(dependency.get("from").get("eruptName").asText())):null;
-                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"), EruptCoreService.getErupt(dependErupt));
-                List<Object> contentList = this.getListFromEruptIds(content.get("ids"), EruptCoreService.getErupt(contentErupt));
-                // Object contentFormValue = this.convertObject(content.get("formValue"), action.contentErupt());
+                List<Object> dependFromList = dependency.hasNonNull("from")
+                                ? this.getListFromEruptIds(dependency.get("from").get("ids"),
+                                                EruptCoreService.getErupt(
+                                                                dependency.get("from").get("eruptName").asText()))
+                                : null;
+                List<Object> dependList = this.getListFromEruptIds(dependency.get("ids"),
+                                EruptCoreService.getErupt(dependErupt));
+                List<Object> contentList = this.getListFromEruptIds(content.get("ids"),
+                                EruptCoreService.getErupt(contentErupt));
+                // Object contentFormValue = this.convertObject(content.get("formValue"),
+                // action.contentErupt());
 
-                if (!ExprInvoke.getExpr(action.show())||!ExprInvoke.getExpr(button.show())) {
+                if (!ExprInvoke.getExpr(action.show()) || !ExprInvoke.getExpr(button.show())) {
                         throw new EruptNoLegalPowerException();
                 }
                 if (button.handler().isInterface()) {
-                        return EruptApiModel.errorApi("请为" + action.text()+button.label() + "实现 OperationHandler 接口");
+                        return EruptApiModel.errorApi("请为" + action.text() + button.label() + "实现 OperationHandler 接口");
                 }
                 String fileName = file.getOriginalFilename();
                 Map<String, Object> map = new HashMap<String, Object>();
-                
+
                 try {
                         if (fileName.endsWith(EruptExcelService.XLS_FORMAT)) {
                                 map.put("file", new HSSFWorkbook(file.getInputStream()));
@@ -294,26 +311,30 @@ public class EruptDataController {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                 }
-               operationHandler.exec( dependFromList, dependList,contentList,map,button.param());
+                operationHandler.exec(dependFromList, dependList, contentList, map, button.param());
 
                 return EruptApiModel.successApi();
 
         }
-        private List<Object> getListFromEruptIds(JsonNode ids,EruptModel eruptModel) {
+
+        private List<Object> getListFromEruptIds(JsonNode ids, EruptModel eruptModel) {
                 List<Object> list = new ArrayList<>();
                 if (ids.isArray() && ids.size() > 0) {
 
                         for (JsonNode id : ids) {
-                            Object obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz()).findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id.asText()));
-                            list.add(obj);
+                                Object obj = DataProcessorManager.getEruptDataProcessor(eruptModel.getClazz())
+                                                .findDataById(eruptModel, EruptUtil.toEruptId(eruptModel, id.asText()));
+                                list.add(obj);
                         }
                 }
                 return list;
         }
 
-        private Object convertObject(JsonNode node ,Class<?>clz) throws JsonProcessingException, IllegalArgumentException {
+        private Object convertObject(JsonNode node, Class<?> clz)
+                        throws JsonProcessingException, IllegalArgumentException {
                 return objectMapper.treeToValue(node, clz);
         }
+
         @PostMapping("/{erupt}" + OPERATOR_PATH_STR + "/importx/{code}")
         @EruptRouter(authIndex = 1, verifyType = EruptRouter.VerifyType.ERUPT)
         @EruptRecordOperate(value = "", dynamicConfig = EruptRowOperationConfig.class)
@@ -395,7 +416,9 @@ public class EruptDataController {
                 Collection<CheckboxModel> checkboxModels = new ArrayList<>(collection.size());
                 collection.forEach(record -> {
                         try {
-                                checkboxModels.add(new CheckboxModel(PropertyUtils.getProperty(record, AnnotationConst.ID), PropertyUtils.getProperty(record, AnnotationConst.LABEL)));
+                                checkboxModels.add(new CheckboxModel(
+                                                PropertyUtils.getProperty(record, AnnotationConst.ID),
+                                                PropertyUtils.getProperty(record, AnnotationConst.LABEL)));
                         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                                 // TODO Auto-generated catch block
                                 e.printStackTrace();
@@ -499,7 +522,8 @@ public class EruptDataController {
                         DataProxyInvoke.invoke(eruptModel, (dataProxy -> {
                                 try {
                                         dataProxy
-                                        .beforeAdd(objectMapper.treeToValue(data, eruptModel.getClazz()));
+                                                        .beforeAdd(objectMapper.treeToValue(data,
+                                                                        eruptModel.getClazz()));
                                 } catch (JsonProcessingException | IllegalArgumentException e) {
                                         // TODO Auto-generated catch block
                                         e.printStackTrace();

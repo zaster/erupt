@@ -53,31 +53,33 @@ import xyz.erupt.core.view.EruptModel;
 
 /**
  * @author YuePeng
- * date 11/1/18.
+ *         date 11/1/18.
  */
 @Slf4j
 @Component
 public class EruptUtil {
-    private static ObjectMapper objectMapper ;
+    private static ObjectMapper objectMapper;
+
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         EruptUtil.objectMapper = objectMapper;
     }
-    //将object中erupt标识的字段抽取出来放到map中
+
+    // 将object中erupt标识的字段抽取出来放到map中
     @SneakyThrows
     public static <T> Map<String, Object> generateEruptDataMap(EruptModel eruptModel, Object obj) {
         Map<String, Object> map = new HashMap<>();
         for (EruptFieldModel fieldModel : eruptModel.getEruptFieldModels()) {
-            
+
             Field field = fieldModel.getField();
-            
+
             Object value = PropertyUtils.getProperty(obj, field.getName());
-            
+
             if (null != value) {
-                
+
                 EruptField eruptField = fieldModel.getEruptField();
                 switch (eruptField.edit().type()) {
-                    
+
                     case CHECKBOX:
                     case TAB_TREE:
                         EruptModel tabEruptModel = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
@@ -94,6 +96,7 @@ public class EruptUtil {
                         break;
                     case TAB_TABLE_REFER:
                     case TAB_TABLE_ADD:
+                        log.info(fieldModel.getFieldReturnName());
                         EruptModel tabEruptModelRef = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
                         Collection<?> collectionRef = (Collection<?>) value;
                         List<Object> list = new ArrayList<>();
@@ -104,11 +107,11 @@ public class EruptUtil {
                         break;
                     default:
                         EruptModel em = EruptCoreService.getErupt(fieldModel.getFieldReturnName());
-                        
-                    if (em!=null&&em.getEruptFieldModels()!=null)
-                        map.put(field.getName(), generateEruptDataMap(em, value));
-                    else 
-                        map.put(field.getName(), value);
+
+                        if (em != null && em.getEruptFieldModels() != null)
+                            map.put(field.getName(), generateEruptDataMap(em, value));
+                        else
+                            map.put(field.getName(), value);
                         break;
                 }
             }
@@ -134,29 +137,38 @@ public class EruptUtil {
         return choiceMap;
     }
 
-    public static ObjectNode getOptions(ChoiceType choiceType,String defaultColor) {
-        final ObjectNode jsonObject =  Stream.of(choiceType.vl()).collect(()->objectMapper.createObjectNode(), (json,vl)->{
-            ObjectNode el = objectMapper.createObjectNode();
-            el.put("text",vl.label());
-            el.put("color",StringUtils.isBlank(vl.color())?defaultColor:vl.color());
-            json.set(vl.value(),el);
-        }, (json,json1)->{});
-        Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz->{{
-            EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it->{
-                ObjectNode el = objectMapper.createObjectNode();
-                el.put("text",it.getLabel());
-                el.put("color",StringUtils.isBlank(it.getColor())?defaultColor:it.getColor());
-                jsonObject.set(it.getValue(),el);
-            });;
-            
-        }});
+    public static ObjectNode getOptions(ChoiceType choiceType, String defaultColor) {
+        final ObjectNode jsonObject = Stream.of(choiceType.vl()).collect(() -> objectMapper.createObjectNode(),
+                (json, vl) -> {
+                    ObjectNode el = objectMapper.createObjectNode();
+                    el.put("text", vl.label());
+                    el.put("color", StringUtils.isBlank(vl.color()) ? defaultColor : vl.color());
+                    json.set(vl.value(), el);
+                }, (json, json1) -> {
+                });
+        Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(claz -> {
+            {
+                EruptSpringUtil.getBean(claz).fetch(choiceType.fetchHandlerParams()).forEach(it -> {
+                    ObjectNode el = objectMapper.createObjectNode();
+                    el.put("text", it.getLabel());
+                    el.put("color", StringUtils.isBlank(it.getColor()) ? defaultColor : it.getColor());
+                    jsonObject.set(it.getValue(), el);
+                });
+                ;
+
+            }
+        });
         return jsonObject;
     }
-  
+
     public static List<VLModel> getChoiceList(ChoiceType choiceType) {
-        List<VLModel> vls = Stream.of(choiceType.vl()).map(vl -> new VLModel(vl.value(), vl.label(), StringUtils.isBlank(vl.color())?"":vl.color(),vl.desc(), vl.disable())).collect(Collectors.toList());
+        List<VLModel> vls = Stream
+                .of(choiceType.vl()).map(vl -> new VLModel(vl.value(), vl.label(),
+                        StringUtils.isBlank(vl.color()) ? "" : vl.color(), vl.desc(), vl.disable()))
+                .collect(Collectors.toList());
         Stream.of(choiceType.fetchHandler()).filter(clazz -> !clazz.isInterface()).forEach(clazz -> {
-            Optional.ofNullable(EruptSpringUtil.getBean(clazz).fetch(choiceType.fetchHandlerParams())).ifPresent(vls::addAll);
+            Optional.ofNullable(EruptSpringUtil.getBean(clazz).fetch(choiceType.fetchHandlerParams()))
+                    .ifPresent(vls::addAll);
         });
         return vls;
     }
@@ -192,7 +204,8 @@ public class EruptUtil {
                 } else if (edit.type().equals(EditType.REFERENCE_TABLE)) {
                     id = edit.referenceTableType().id();
                 }
-                EruptFieldModel efm = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName()).getEruptFieldMap().get(id);
+                EruptFieldModel efm = EruptCoreService.getErupt(eruptFieldModel.getFieldReturnName()).getEruptFieldMap()
+                        .get(id);
                 Map<String, Object> map = (Map<String, Object>) obj;
                 return TypeUtil.typeStrConvertObject(map.get(id), efm.getField().getType());
             default:
@@ -200,7 +213,7 @@ public class EruptUtil {
         }
     }
 
-    //生成一个合法的searchCondition
+    // 生成一个合法的searchCondition
     public static <T> List<Condition> geneEruptSearchCondition(EruptModel eruptModel, List<Condition> searchCondition) {
         checkEruptSearchNotnull(eruptModel, searchCondition);
         List<Condition> legalConditions = new ArrayList<>();
@@ -241,7 +254,7 @@ public class EruptUtil {
         return legalConditions;
     }
 
-    public static <T>void checkEruptSearchNotnull(EruptModel eruptModel, List<Condition> searchCondition) {
+    public static <T> void checkEruptSearchNotnull(EruptModel eruptModel, List<Condition> searchCondition) {
         Map<String, Condition> conditionMap = new HashMap<>();
         if (null != searchCondition) {
             searchCondition.forEach(condition -> conditionMap.put(condition.getKey(), condition));
@@ -251,24 +264,26 @@ public class EruptUtil {
             if (edit.search().value() && edit.search().notNull()) {
                 Condition condition = conditionMap.get(fieldModel.getFieldName());
                 if (null == condition || null == condition.getValue()) {
-                    throw new EruptApiErrorTip(EruptApiModel.Status.INFO, edit.title() + "必填", EruptApiModel.PromptWay.MESSAGE);
+                    throw new EruptApiErrorTip(EruptApiModel.Status.INFO, edit.title() + "必填",
+                            EruptApiModel.PromptWay.MESSAGE);
                 }
                 if (condition.getValue() instanceof List) {
                     if (((List<?>) condition.getValue()).size() == 0) {
-                        throw new EruptApiErrorTip(EruptApiModel.Status.INFO + edit.title() + "必填", EruptApiModel.PromptWay.MESSAGE);
+                        throw new EruptApiErrorTip(EruptApiModel.Status.INFO + edit.title() + "必填",
+                                EruptApiModel.PromptWay.MESSAGE);
                     }
                 }
             }
         }
     }
 
-    public static <T>EruptApiModel validateEruptValue(EruptModel eruptModel, JsonNode jsonObject) {
+    public static <T> EruptApiModel validateEruptValue(EruptModel eruptModel, JsonNode jsonObject) {
         for (EruptFieldModel field : eruptModel.getEruptFieldModels()) {
             Edit edit = field.getEruptField().edit();
             JsonNode value = jsonObject.get(field.getFieldName());
             if (field.getEruptField().edit().notNull()) {
                 if (!jsonObject.hasNonNull(field.getFieldName())) {
-                    
+
                     return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必填");
                 } else if (String.class.getSimpleName().equals(field.getFieldReturnName())) {
                     if (StringUtils.isBlank(value.textValue())) {
@@ -277,25 +292,28 @@ public class EruptUtil {
                 }
             }
             if (field.getEruptField().edit().type() == EditType.COMBINE) {
-                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()), jsonObject.get(field.getFieldName()));
+                EruptApiModel eam = validateEruptValue(EruptCoreService.getErupt(field.getFieldReturnName()),
+                        jsonObject.get(field.getFieldName()));
                 if (eam.getStatus() == EruptApiModel.Status.ERROR) {
                     return eam;
                 }
             }
 
-            if (value!=null&&!value.isNull()) {
-                //xss 注入处理
+            if (value != null && !value.isNull()) {
+                // xss 注入处理
                 if (edit.type() == EditType.TEXTAREA || edit.type() == EditType.INPUT) {
                     if (SecurityUtil.xssInspect(value.toString())) {
-                        return EruptApiModel.errorNoInterceptApi(field.getEruptField().edit().title() + "检测到有恶意跨站脚本，请重新编辑！");
+                        return EruptApiModel
+                                .errorNoInterceptApi(field.getEruptField().edit().title() + "检测到有恶意跨站脚本，请重新编辑！");
                     }
                 }
-                //数据类型校验
+                // 数据类型校验
                 switch (edit.type()) {
                     case NUMBER:
                     case SLIDER:
                         if (!NumberUtils.isCreatable(value.asText())) {
-                            return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "必须为数值");
+                            return EruptApiModel
+                                    .errorNoInterceptMessage(field.getEruptField().edit().title() + "必须为数值");
                         }
                         break;
                     case INPUT:
@@ -303,7 +321,8 @@ public class EruptUtil {
                             String content = value.asText();
                             if (StringUtils.isNotBlank(content)) {
                                 if (!Pattern.matches(edit.inputType().regex(), content)) {
-                                    return EruptApiModel.errorNoInterceptMessage(field.getEruptField().edit().title() + "格式不正确");
+                                    return EruptApiModel
+                                            .errorNoInterceptMessage(field.getEruptField().edit().title() + "格式不正确");
                                 }
                             }
                         }
@@ -316,51 +335,49 @@ public class EruptUtil {
     }
 
     public static Object toEruptId(EruptModel eruptModel, String id) {
-        Field primaryField = ReflectUtil.findClassField(eruptModel.getClazz()
-                , eruptModel.getErupt().primaryKeyCol());
+        Field primaryField = ReflectUtil.findClassField(eruptModel.getClazz(), eruptModel.getErupt().primaryKeyCol());
         return TypeUtil.typeStrConvertObject(id, primaryField.getType());
     }
 
-    //将对象A的非空数据源覆盖到对象B中
+    // 将对象A的非空数据源覆盖到对象B中
     public static Object dataTarget(EruptModel eruptModel, Object data, Object target, SceneEnum sceneEnum) {
         ReflectUtil.findClassAllFields(eruptModel.getClazz(), (field) -> {
             EruptField eruptField = field.getAnnotation(EruptField.class);
             if (null != eruptField) {
-                boolean readonly = sceneEnum == SceneEnum.EDIT ? eruptField.edit().readonly().edit() : eruptField.edit().readonly().add();
+                boolean readonly = sceneEnum == SceneEnum.EDIT ? eruptField.edit().readonly().edit()
+                        : eruptField.edit().readonly().add();
                 if (StringUtils.isNotBlank(eruptField.edit().title()) && !readonly) {
                     try {
-                        
+
                         Object dataFieldValue = PropertyUtils.getProperty(data, field.getName());
-                        log.info(field.getName());
-                        log.info(dataFieldValue+"");
                         PropertyUtils.setProperty(target, field.getName(), dataFieldValue);
-                         
+
                     } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                         e.printStackTrace();
                     }
                 }
             }
-            
+
         });
         return target;
     }
 
-    //清理序列化后对象所产生的默认值（通过json串进行校验）
+    // 清理序列化后对象所产生的默认值（通过json串进行校验）
     public static void clearObjectDefaultValueByJson(Object obj, ObjectNode data) {
         ReflectUtil.findClassAllFields(obj.getClass(), field -> {
-           
-                try {
-                    log.info(obj.getClass().getSimpleName());
-                    log.info(field.getName());
-                    if (null != PropertyUtils.getProperty(obj, field.getName())&&
+
+            try {
+                log.info(obj.getClass().getSimpleName());
+                log.info(field.getName());
+                if (null != PropertyUtils.getProperty(obj, field.getName()) &&
                         !data.has(field.getName())) {
-                            PropertyUtils.setProperty(obj, field.getName(), null);
-                    }
-                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    PropertyUtils.setProperty(obj, field.getName(), null);
                 }
-            
+            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
         });
     }
 
@@ -370,23 +387,24 @@ public class EruptUtil {
      * @return AttachmentProxy
      */
     public static AttachmentProxy findAttachmentProxy() {
-        EruptAttachmentUpload eruptAttachmentUpload = EruptApplication.getPrimarySource().getAnnotation(EruptAttachmentUpload.class);
+        EruptAttachmentUpload eruptAttachmentUpload = EruptApplication.getPrimarySource()
+                .getAnnotation(EruptAttachmentUpload.class);
         if (null != eruptAttachmentUpload) {
             return EruptSpringUtil.getBean(eruptAttachmentUpload.value());
         }
         return null;
     }
 
-    public static JsonNode getYn(BoolType type ) {
-        
-        Map<String,Object> map= new HashMap<String,Object>();
-        map.put(true+"", new ColorText("是","green"));
-        map.put(false+"", new ColorText("否","red"));
-        if (type!=null) {
-            map.put(true+"",  new ColorText(type.trueText(),"green"));
-            map.put(false+"", new ColorText(type.falseText(),"red")); 
+    public static JsonNode getYn(BoolType type) {
+
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put(true + "", new ColorText("是", "green"));
+        map.put(false + "", new ColorText("否", "red"));
+        if (type != null) {
+            map.put(true + "", new ColorText(type.trueText(), "green"));
+            map.put(false + "", new ColorText(type.falseText(), "red"));
         }
-        
+
         return objectMapper.convertValue(map, JsonNode.class);
     }
 

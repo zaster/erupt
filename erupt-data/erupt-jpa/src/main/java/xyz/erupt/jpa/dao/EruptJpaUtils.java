@@ -42,7 +42,7 @@ public class EruptJpaUtils {
 
     public static final String LEFT_JOIN = " left outer join ";
 
-    public static <TT>Set<String> getEruptColJpaKeys(EruptModel eruptModel) {
+    public static <TT> Set<String> getEruptColJpaKeys(EruptModel eruptModel) {
         Set<String> cols = new HashSet<>();
         String eruptNameSymbol = eruptModel.getEruptName() + ".";
         cols.add(eruptNameSymbol + eruptModel.getErupt().primaryKeyCol() + AS + eruptModel.getErupt().primaryKeyCol());
@@ -53,8 +53,8 @@ public class EruptJpaUtils {
                     || null != f.getAnnotation(Transient.class)) {
                 return;
             }
-            if (field.getEruptField()!=null) {
-                cols.add(eruptNameSymbol + field.getFieldName()) ;
+            if (field.getEruptField() != null) {
+                cols.add(eruptNameSymbol + field.getFieldName());
             }
         });
         return cols;
@@ -133,36 +133,36 @@ public class EruptJpaUtils {
                     default:
                         hql.append(EruptJpaUtils.AND).append(_key).append("=:").append(paramKey);
                         break;
-                    }
-               
+                }
+
             }
         }
         AnnotationUtil.switchFilterConditionToStr(eruptModel.getErupt().filter()).forEach(it -> {
             if (StringUtils.isNotBlank(it))
-                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(),"")).append(it);
+                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(), "")).append(it);
         });
         Optional.ofNullable(customCondition).ifPresent(it -> it.forEach(str -> {
             if (StringUtils.isNotBlank(str))
-                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(),"")).append(str);
+                hql.append(AND).append(completeHqlPath(eruptModel.getEruptName(), "")).append(str);
         }));
         return hql.toString();
     }
 
     public static String geneEruptHqlOrderBy(EruptModel eruptModel, String orderBy) {
-        if (StringUtils.isBlank(orderBy)){
+        if (StringUtils.isBlank(orderBy)) {
             if (StringUtils.isAllBlank(eruptModel.getErupt().orderBy()))
                 return "";
             orderBy = eruptModel.getErupt().orderBy();
         }
         StringBuilder sb = new StringBuilder(" order by ");
         List<String> orderList = new ArrayList<String>();
-        ///Stream.of(orderBy.split(",")).collect(ArrayList<String>::new, (List<String>list,String str)->{list.add();}, List<String>::addAll)));
-        for(String str: orderBy.split(",")) {
+        /// Stream.of(orderBy.split(",")).collect(ArrayList<String>::new,
+        /// (List<String>list,String str)->{list.add();}, List<String>::addAll)));
+        for (String str : orderBy.split(",")) {
             orderList.add(completeHqlPath(eruptModel.getEruptName(), str));
         }
         sb.append(String.join(",", orderList));
 
-        
         return sb.toString();
     }
 
